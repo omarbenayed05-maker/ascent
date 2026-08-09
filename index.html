@@ -261,10 +261,11 @@
     <div class="gauge-wrap" id="menuGaugeWrap"></div>
     <p>Type the word above the stairs to climb higher. Miss a letter, or run out of time, and you fall. Chain words without missing to build a combo.</p>
     <div class="menu-row">
-      <button class="cta" id="freeModeBtn">FREE MODE</button>
+      <button class="cta" id="freeModeBtn">FREE MODE 🏆</button>
       <button class="cta secondary" id="learnModeBtn">LEARN MODE</button>
     </div>
     <p id="freeLockMsg" style="font-size:11px;"></p>
+    <p id="competitiveNote" style="font-size:11px; color:var(--amber);"></p>
   </div>
 
   <div id="levelSelect" class="overlay hidden">
@@ -447,6 +448,7 @@
   function onAuthChanged(user){
     currentUser = user;
     refreshAuthUI();
+    refreshMenu();
     if(user) pullCloudSave(user.uid);
   }
   function signIn(){
@@ -1234,6 +1236,12 @@
     } else {
       document.getElementById('freeModeBtn').classList.remove('locked');
       freeLockMsg.textContent = "";
+    }
+    const note = document.getElementById('competitiveNote');
+    if(note){
+      note.textContent = currentUser
+        ? '🏆 Signed in — your best Free Mode run submits to the leaderboard automatically.'
+        : '🏆 Free Mode is the competitive mode — sign in to submit your run to the leaderboard.';
     }
   }
 
