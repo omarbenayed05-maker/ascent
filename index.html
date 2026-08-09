@@ -255,6 +255,8 @@
       <div class="menu-hud-item">🪙 <span id="menuCoins">0</span></div>
       <div class="menu-hud-item">🏆 Best <span id="menuBest">0</span></div>
       <button class="cta secondary small" id="menuShopBtn">SHOP</button>
+      <button class="cta secondary small" id="menuAuthBtn">SIGN IN</button>
+      <button class="cta secondary small" id="menuLeaderboardBtn">🏆 BOARD</button>
     </div>
     <div class="gauge-wrap" id="menuGaugeWrap"></div>
     <p>Type the word above the stairs to climb higher. Miss a letter, or run out of time, and you fall. Chain words without missing to build a combo.</p>
@@ -454,9 +456,11 @@
   }
   function signOutUser(){ if(fbAuth) fbAuth.signOut(); }
   function refreshAuthUI(){
+    const label = currentUser ? (currentUser.displayName || 'Account').split(' ')[0].toUpperCase() : 'SIGN IN';
     const btn = document.getElementById('authBtn');
-    if(!btn) return;
-    btn.textContent = currentUser ? (currentUser.displayName || 'Account').split(' ')[0].toUpperCase() : 'SIGN IN';
+    const menuBtn = document.getElementById('menuAuthBtn');
+    if(btn) btn.textContent = label;
+    if(menuBtn) menuBtn.textContent = label;
   }
 
   async function pullCloudSave(uid){
@@ -1239,6 +1243,14 @@
     shopScreen.classList.remove('hidden');
   }
   document.getElementById('menuShopBtn').addEventListener('click', openShop);
+  document.getElementById('menuAuthBtn').addEventListener('click', ()=>{
+    if(currentUser) signOutUser(); else signIn();
+  });
+  document.getElementById('menuLeaderboardBtn').addEventListener('click', ()=>{
+    mainMenu.classList.add('hidden');
+    document.getElementById('leaderboardScreen').classList.remove('hidden');
+    loadLeaderboard();
+  });
 
   document.getElementById('freeModeBtn').addEventListener('click', ()=>{
     if(save.level < FREE_MODE_MIN_LEVEL) return;
