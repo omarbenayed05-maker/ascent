@@ -30,6 +30,8 @@
   #playerBadge{ display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11px; color:var(--text-dim); cursor:default; }
   #playerBadge b{ color:var(--amber); }
   #coinsTag{ display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:12px; color:var(--coin); }
+  #hudActions{ display:flex; align-items:center; gap:10px; transition:opacity 0.2s; }
+  #hud.in-game #hudActions{ display:none; }
   #shopBtn, #authBtn, #leaderboardBtn{ font-family:var(--mono); font-size:11px; letter-spacing:0.08em; color:var(--text); background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:6px; padding:6px 10px; cursor:pointer; }
   #authBtn{ display:flex; align-items:center; gap:6px; }
   #authBtn .authAvatar{ width:16px; height:16px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 1px rgba(255,255,255,0.2) inset; }
@@ -191,6 +193,7 @@
   .shop-item button{ font-family:var(--mono); font-size:10px; padding:6px 8px; border-radius:5px; border:1px solid var(--panel-border); background:transparent; color:var(--text); cursor:pointer; }
   .shop-item button.equipped{ background:var(--glow); color:#0a0d16; border-color:var(--glow); }
   .shop-item button.buy{ background:var(--coin); color:#3a2c00; border-color:var(--coin); }
+  .shop-item button.buy-gem{ background:#b98cff; color:#1e0e33; border-color:#b98cff; }
   .shop-item button.locked-reward{ background:transparent; color:var(--text); border-style:dashed; cursor:not-allowed; }
   .shop-item .unlock-note{ font-family:var(--mono); font-size:9.5px; color:var(--amber); line-height:1.3; }
   .shop-divider{ grid-column:1 / -1; font-family:var(--mono); font-size:11px; letter-spacing:0.1em; color:var(--glow); text-transform:uppercase; margin-top:8px; text-align:left; }
@@ -249,6 +252,55 @@
   .ribbon{ position:absolute; left:-10%; width:120%; height:70px; border-radius:50%; filter:blur(10px); opacity:0.25; animation-name:drift-ribbon; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
   @keyframes drift-ribbon{ 0%,100%{ transform:translateX(0) scaleY(1); } 50%{ transform:translateX(4%) scaleY(1.3); } }
 
+  body.theme-aetherial #skyLayer{ opacity:1; }
+  body.theme-aetherial #app{ background: linear-gradient(180deg, #ff9d6c 0%, #ffb27a 22%, #f7c98c 42%, #cfa9c9 62%, #7f7fb8 82%, #40406e 100%); }
+  body.theme-aetherial #stairSvg{ position:relative; z-index:1; }
+  body.theme-aetherial #climber{ z-index:6; }
+  .sun-orb{ position:absolute; left:50%; border-radius:50%; filter:blur(2px);
+    background: radial-gradient(circle, #fff6dd 0%, #ffd98a 45%, rgba(255,180,110,0.4) 72%, transparent 85%); }
+  .sun-rays{ position:absolute; left:50%; width:520px; height:520px; margin-left:-260px; margin-top:-260px;
+    background: conic-gradient(from 0deg,
+      rgba(255,246,221,0.22) 0deg 8deg, transparent 8deg 26deg,
+      rgba(255,246,221,0.16) 26deg 34deg, transparent 34deg 55deg,
+      rgba(255,246,221,0.20) 55deg 62deg, transparent 62deg 90deg,
+      rgba(255,246,221,0.14) 90deg 96deg, transparent 96deg 130deg,
+      rgba(255,246,221,0.20) 130deg 138deg, transparent 138deg 165deg,
+      rgba(255,246,221,0.16) 165deg 172deg, transparent 172deg 200deg,
+      rgba(255,246,221,0.20) 200deg 208deg, transparent 208deg 235deg,
+      rgba(255,246,221,0.15) 235deg 242deg, transparent 242deg 270deg,
+      rgba(255,246,221,0.20) 270deg 278deg, transparent 278deg 310deg,
+      rgba(255,246,221,0.16) 310deg 318deg, transparent 318deg 360deg);
+    filter: blur(3px); opacity:0.65; animation: rays-spin 90s linear infinite; }
+  @keyframes rays-spin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+  .aether-mote{ position:absolute; border-radius:50%; opacity:0;
+    background: radial-gradient(circle, #fff8e8, #ffcf8f 55%, transparent 78%);
+    box-shadow:0 0 8px 2px rgba(255,204,140,0.55);
+    animation-name: mote-rise; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+  @keyframes mote-rise{
+    0%{ transform:translateY(0) translateX(0); opacity:0; }
+    12%{ opacity:0.9; }
+    88%{ opacity:0.5; }
+    100%{ transform:translateY(-100vh) translateX(var(--drift,20px)); opacity:0; }
+  }
+  .a-cloud{ position:absolute; border-radius:50%; filter:blur(1px);
+    background: radial-gradient(ellipse at 40% 40%, rgba(255,255,255,0.95), rgba(255,235,215,0.55) 70%, transparent 85%);
+    animation-name: drift-cloud; animation-timing-function:linear; animation-iteration-count:infinite; }
+
+  /* ---- premium/reward skin shine — a soft pulsing halo behind the climber for skins
+     flagged "glow" (gem-shop items and rare unlock rewards), plus a matching glow on the
+     active stair tread for the shinier stair skins ---- */
+  #climber.shiny::before{ content:''; position:absolute; inset:-16px; border-radius:50%; z-index:-1;
+    background: radial-gradient(circle, var(--skin-glow, rgba(255,255,255,0.5)), transparent 70%);
+    filter: blur(9px); opacity:0.75; pointer-events:none;
+    animation: shiny-pulse 1.8s ease-in-out infinite; }
+  @keyframes shiny-pulse{ 0%,100%{ opacity:0.45; transform:scale(0.88); } 50%{ opacity:0.85; transform:scale(1.08); } }
+  #activeTread.shiny{ filter: drop-shadow(0 0 7px var(--glow)) drop-shadow(0 0 2px var(--glow)); }
+  .shop-swatch{ position:relative; overflow:hidden; box-shadow: inset 0 -6px 10px rgba(0,0,0,0.18), inset 0 3px 5px rgba(255,255,255,0.12); }
+  .shop-swatch.shine::after{ content:''; position:absolute; inset:0;
+    background:linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.65) 48%, transparent 70%);
+    background-size:220% 100%; animation: shine-sweep 2.4s ease-in-out infinite; }
+  @keyframes shine-sweep{ 0%{ background-position:160% 0; } 100%{ background-position:-60% 0; } }
+
   /* ---- vignette + ambient embers behind the void backdrop, so idle screens aren't flat ---- */
   #vignette{ position:absolute; inset:0; pointer-events:none; z-index:1;
     background: radial-gradient(ellipse at 50% 30%, transparent 45%, rgba(0,0,0,0.55) 100%); }
@@ -277,6 +329,13 @@
   #mobileGate h1 span{ color:var(--glow); }
   #mobileGate p{ color:var(--text-dim); font-size:13px; max-width:360px; line-height:1.7; font-family:var(--sans); }
   #mobileGate .kbdHint{ font-family:var(--mono); font-size:11px; color:var(--text-dim); border:1px solid var(--panel-border); border-radius:8px; padding:10px 14px; background:var(--panel-bg); max-width:340px; line-height:1.6; }
+
+  /* ---- revive prompt ---- */
+  #reviveScreen{ z-index:60; }
+  #reviveScreen .final-score{ font-size:30px; }
+  #giftInput{ width:280px; background:var(--bg-deep); border:1px solid var(--panel-border); border-radius:8px; padding:11px 12px; font-family:var(--mono); font-size:13px; color:var(--text); text-align:center; text-transform:lowercase; }
+  #giftInput:focus{ outline:none; border-color:var(--glow); }
+  #gemsTag{ display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:12px; color:#c9a8ff; }
 </style>
 </head>
 <body>
@@ -296,9 +355,12 @@
       <div class="brand" id="menuBtn">ASC<span>ENT</span></div>
       <div id="playerBadge">LV <b id="playerLevelTag">1</b></div>
       <div id="coinsTag">🪙<span id="coinsVal">0</span></div>
-      <button id="shopBtn">SHOP</button>
-      <button id="authBtn"><span class="authAvatar" id="authAvatarDot"></span><span id="authBtnLabel">ACCOUNT</span></button>
-      <button id="leaderboardBtn">🏆</button>
+      <div id="gemsTag">💎<span id="gemsVal">0</span></div>
+      <div id="hudActions">
+        <button id="shopBtn">SHOP</button>
+        <button id="authBtn"><span class="authAvatar" id="authAvatarDot"></span><span id="authBtnLabel">ACCOUNT</span></button>
+        <button id="leaderboardBtn">🏆</button>
+      </div>
     </div>
     <div id="hearts"></div>
     <div id="score">
@@ -336,13 +398,15 @@
     <h1>ASC<span>ENT</span></h1>
     <div class="menu-hud">
       <div class="menu-hud-item">🪙 <span id="menuCoins">0</span></div>
+      <div class="menu-hud-item">💎 <span id="menuGems">0</span></div>
       <div class="menu-hud-item">🏆 Best <span id="menuBest">0</span></div>
       <button class="cta secondary small" id="menuShopBtn">SHOP</button>
+      <button class="cta secondary small" id="menuGiftBtn">GIFTS</button>
       <button class="cta secondary small" id="menuAuthBtn">SIGN IN</button>
       <button class="cta secondary small" id="menuLeaderboardBtn">🏆 BOARD</button>
     </div>
     <div class="gauge-wrap" id="menuGaugeWrap"></div>
-    <p>Type the word above the stairs to climb higher. Miss a letter, or run out of time, and you fall. Chain words without missing to build a combo.</p>
+    <p>Type the word above the stairs to climb higher. Miss a letter, or run out of time, and you fall. Chain words without missing to build a combo — big streaks earn bonus hearts, free revives, and rare skins.</p>
     <div class="menu-row">
       <button class="cta" id="freeModeBtn">FREE MODE 🏆</button>
       <button class="cta secondary" id="learnModeBtn">LEARN MODE</button>
@@ -353,14 +417,17 @@
 
   <div id="levelSelect" class="overlay hidden">
     <h1>LEARN <span>MODE</span></h1>
-    <p>Levels unlock one at a time, grouped into worlds that get harder as you climb. Stars are based on the hearts you finish with.</p>
+    <p>Levels unlock one at a time, grouped into worlds that get harder as you climb. Stars are based on the hearts you finish with. Run out of hearts and you can pay coins to revive.</p>
     <div class="level-list" id="levelListWrap"></div>
     <button class="cta secondary" id="backToMenuBtn">BACK</button>
   </div>
 
   <div id="shopScreen" class="overlay hidden">
     <h1>SH<span>OP</span></h1>
-    <div id="coinsTag2" style="font-family:var(--mono); color:var(--coin); font-size:13px;">🪙 <span id="coinsVal2">0</span></div>
+    <div class="menu-hud">
+      <div class="menu-hud-item">🪙 <span id="coinsVal2">0</span></div>
+      <div class="menu-hud-item">💎 <span id="gemsVal2">0</span></div>
+    </div>
     <div class="shop-tabs">
       <div class="shop-tab active" id="tabCharacter">Character</div>
       <div class="shop-tab" id="tabStairs">Stairs</div>
@@ -368,6 +435,17 @@
     </div>
     <div class="shop-grid" id="shopGrid"></div>
     <button class="cta secondary" id="shopBackBtn">BACK</button>
+  </div>
+
+  <div id="giftScreen" class="overlay hidden">
+    <h1>GIFT <span>CODES</span></h1>
+    <p>Got a code? Redeem it here for bonus skins and rewards.</p>
+    <input id="giftInput" placeholder="enter code" maxlength="24" autocomplete="off" />
+    <div class="menu-row">
+      <button class="cta" id="giftRedeemBtn">REDEEM</button>
+    </div>
+    <p id="giftStatusMsg" style="font-size:11px;"></p>
+    <button class="cta secondary" id="giftBackBtn">BACK</button>
   </div>
 
   <div id="accountScreen" class="overlay hidden">
@@ -385,6 +463,7 @@
     <div class="gauge-wrap" id="accountGaugeWrap"></div>
     <div class="menu-hud">
       <div class="menu-hud-item">🪙 <span id="accountCoins">0</span></div>
+      <div class="menu-hud-item">💎 <span id="accountGems">0</span></div>
       <div class="menu-hud-item">🏆 Best <span id="accountBest">0</span></div>
     </div>
     <div class="toggle-row">
@@ -416,9 +495,20 @@
 
   <div id="leaderboardScreen" class="overlay hidden">
     <h1>LEADER<span>BOARD</span></h1>
-    <p id="leaderboardMsg">Best Free Mode runs, ranked by steps climbed — ties broken by steps per second.</p>
+    <p id="leaderboardMsg">Best Free Mode runs, ranked by steps climbed — ties broken by steps per second. Matching names show a short tag so you can tell players apart.</p>
     <div class="leaderboard-list" id="leaderboardList"></div>
     <button class="cta secondary" id="leaderboardBackBtn">BACK</button>
+  </div>
+
+  <div id="reviveScreen" class="overlay hidden">
+    <h1>YOU <span>FELL</span></h1>
+    <p id="reviveDesc">Pay coins to get back up and keep climbing?</p>
+    <div class="final-score" id="reviveScoreShown">0</div>
+    <p style="font-size:11px;">steps climbed so far</p>
+    <div class="menu-row">
+      <button class="cta" id="reviveAcceptBtn">REVIVE</button>
+      <button class="cta secondary" id="reviveDeclineBtn">GIVE UP</button>
+    </div>
   </div>
 
   <div id="endScreen" class="overlay hidden">
@@ -491,10 +581,74 @@
       setTimeout(()=>{ try{ nodes.noise.stop(); nodes.lfo.stop(); }catch(e){} }, 500);
     }catch(e){}
   }
-  // wind only plays while the game is running AND the Open Sky backdrop is equipped
+
+  /* ---------- cozy pad ambience (synthesized — only plays with the Aetherial Drift backdrop) ---------- */
+  let padNodes = null;
+  function startPad(){
+    const ctx = ensureAudio();
+    if(!ctx || padNodes) return;
+    const master = ctx.createGain();
+    master.gain.value = 0;
+    master.connect(ctx.destination);
+
+    // slow filtered chord, warm and soft — three detuned triangle voices + a gentle chime pluck loop
+    const freqs = [196.0, 246.94, 293.66]; // G3, B3, D4 — warm major triad
+    const voices = [];
+    freqs.forEach((f,i)=>{
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = f;
+      osc.detune.value = (i-1)*4;
+      const vGain = ctx.createGain();
+      vGain.gain.value = 0.22;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 900;
+      osc.connect(filt); filt.connect(vGain); vGain.connect(master);
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.08 + i*0.02;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 60;
+      lfo.connect(lfoGain); lfoGain.connect(filt.frequency);
+      osc.start(); lfo.start();
+      voices.push({osc,lfo,vGain,filt});
+    });
+    master.gain.setTargetAtTime(0.05, ctx.currentTime, 1.2);
+
+    // occasional soft chime pluck, gives it a "cosy" character instead of a flat drone
+    const chimeNotes = [523.25, 587.33, 659.25, 783.99, 880.0];
+    let chimeTimer = setInterval(()=>{
+      if(!padNodes) return;
+      if(Math.random() > 0.55) return;
+      const freq = chimeNotes[Math.floor(Math.random()*chimeNotes.length)];
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      osc.connect(g); g.connect(master);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.09, t+0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+1.6);
+      osc.start(t); osc.stop(t+1.7);
+    }, 2600);
+
+    padNodes = { master, voices, chimeTimer };
+  }
+  function stopPad(){
+    if(!padNodes || !audioCtx) return;
+    const nodes = padNodes;
+    padNodes = null;
+    clearInterval(nodes.chimeTimer);
+    try{
+      nodes.master.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
+      setTimeout(()=>{ nodes.voices.forEach(v=>{ try{ v.osc.stop(); v.lfo.stop(); }catch(e){} }); }, 900);
+    }catch(e){}
+  }
+
+  // ambience only plays while the game is running AND the matching backdrop is equipped
   function syncWind(){
-    if(state && state.running && save.equippedBackdrop === 'sky') startWind();
-    else stopWind();
+    if(state && state.running && save.equippedBackdrop === 'sky') startWind(); else stopWind();
+    if(state && state.running && save.equippedBackdrop === 'aetherial') startPad(); else stopPad();
   }
 
   // short ascending chime played on every completed word ("pararan")
@@ -519,10 +673,6 @@
   }
 
   /* ---------- desktop-only gate ---------- */
-  // Heuristic: touch-primary pointer + no fine (mouse) pointer + phone/tablet UA + narrow-ish
-  // viewport = almost certainly no physical keyboard attached. A Chromebook/tablet-with-keyboard
-  // still has a fine pointer or a wide viewport, so it slips through — and there's a manual
-  // "continue anyway" escape hatch for anyone the heuristic gets wrong.
   function looksLikeTouchOnlyDevice(){
     const coarseOnly = window.matchMedia && window.matchMedia('(pointer: coarse)').matches && !(window.matchMedia('(any-pointer: fine)').matches);
     const uaFlag = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -569,7 +719,7 @@
 
   function defaultSave(){
     return {
-      xp:0, level:1, coins:0, bestScoreFree:0,
+      xp:0, level:1, coins:0, gems:0, bestScoreFree:0,
       levelStars:{},
       unlockedLevel: 1,
       completedLevels:{},
@@ -578,6 +728,8 @@
       ownedBackdrops:['void'], equippedBackdrop:'void',
       claimedLevelRewards:{},
       claimedFreeRewards:{},
+      claimedComboRewards:{},
+      redeemedCodes:[],
       nickname:null,
       leaderboardOptOut:true,
       showGhost:true,
@@ -591,8 +743,11 @@
       if(raw) save = Object.assign(defaultSave(), JSON.parse(raw));
       if(!save.claimedLevelRewards) save.claimedLevelRewards = {};
       if(!save.claimedFreeRewards) save.claimedFreeRewards = {};
+      if(!save.claimedComboRewards) save.claimedComboRewards = {};
+      if(!save.redeemedCodes) save.redeemedCodes = [];
       if(!save.completedLevels) save.completedLevels = {};
       if(!save.bestFreeStepDurations) save.bestFreeStepDurations = [];
+      if(typeof save.gems !== 'number') save.gems = 0;
       if(typeof save.showGhost !== 'boolean') save.showGhost = true;
     }catch(e){ save = defaultSave(); }
   }
@@ -603,8 +758,6 @@
   loadSave();
 
   /* ---------- Firebase (accounts, cloud save, leaderboard) ---------- */
-  // PASTE your Firebase project's config here — Firebase Console > Project Settings > Your apps > SDK setup
-  // Until this has real values, sign-in/leaderboard buttons just explain that setup isn't done yet.
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyCAI0XYer8zD2IzPlLOYRE_HhaQ_sJZIhg",
     authDomain: "acsent-18b7a.firebaseapp.com",
@@ -665,7 +818,6 @@
       const doc = await fbDb.collection('saves').doc(uid).get();
       if(doc.exists){
         const cloud = doc.data();
-        // last-write-wins by total progress: keep whichever save (local or cloud) is further along
         const cloudTotal = (cloud.level||1)*1000 + (cloud.xp||0);
         const localTotal = (save.level||1)*1000 + (save.xp||0);
         if(cloudTotal > localTotal){
@@ -701,7 +853,8 @@
       const oldScore = existing.exists ? (existing.data().score || 0) : 0;
       const oldSps = existing.exists ? (existing.data().stepsPerSecond || 0) : 0;
       if(!existing.exists || beatsExisting(score, stepsPerSecond, oldScore, oldSps)){
-        await ref.set({ name: (save.nickname || currentUser.displayName || 'Anonymous'), stepsPerSecond, score, updatedAt: Date.now() });
+        // uid-derived tag lets the leaderboard tell apart two players who picked the same nickname
+        await ref.set({ name: (save.nickname || currentUser.displayName || 'Anonymous'), tag: currentUser.uid.slice(-4), stepsPerSecond, score, updatedAt: Date.now() });
       }
     }catch(e){ console.warn('Leaderboard submit failed', e); }
   }
@@ -721,8 +874,6 @@
     }
     list.innerHTML = '<div style="font-family:var(--mono); font-size:11px; color:var(--text-dim);">Loading…</div>';
     try{
-      // Order by score server-side (needs no composite index), then break ties by
-      // steps/second client-side — a wider fetch guarantees ties near the cutoff sort correctly.
       const snap = await fbDb.collection('leaderboard').orderBy('score','desc').limit(50).get();
       const rows = [];
       snap.forEach(doc=>rows.push(doc.data()));
@@ -730,14 +881,21 @@
         if((b.score||0) !== (a.score||0)) return (b.score||0) - (a.score||0);
         return (b.stepsPerSecond||0) - (a.stepsPerSecond||0);
       });
+      const top = rows.slice(0,10);
+      // count how many times each display name appears in the visible list — only players
+      // who share a name with someone else get the disambiguating #tag suffix
+      const nameCounts = {};
+      top.forEach(d=>{ const n=d.name||'Anonymous'; nameCounts[n]=(nameCounts[n]||0)+1; });
       list.innerHTML = '';
-      rows.slice(0,10).forEach((d, i)=>{
+      top.forEach((d, i)=>{
+        const n = d.name||'Anonymous';
+        const label = nameCounts[n] > 1 && d.tag ? `${n} #${d.tag}` : n;
         const row = document.createElement('div');
         row.className = 'leaderboard-row';
-        row.innerHTML = `<span class="rank">#${i+1}</span><span class="name">${d.name||'Anonymous'}</span><span class="val">${d.score||0} steps <span style="color:var(--text-dim);">· ${(d.stepsPerSecond||0).toFixed(2)}/s</span></span>`;
+        row.innerHTML = `<span class="rank">#${i+1}</span><span class="name">${label}</span><span class="val">${d.score||0} steps <span style="color:var(--text-dim);">· ${(d.stepsPerSecond||0).toFixed(2)}/s</span></span>`;
         list.appendChild(row);
       });
-      if(rows.length===0) msg.textContent = 'No runs yet — be the first on the board.';
+      if(top.length===0) msg.textContent = 'No runs yet — be the first on the board.';
     }catch(e){
       list.innerHTML = '';
       msg.textContent = 'Could not load leaderboard: ' + e.message;
@@ -754,6 +912,7 @@
     persistSave();
   }
   function grantCoins(amount){ save.coins += amount; persistSave(); }
+  function grantGems(amount){ save.gems += amount; persistSave(); }
 
   /* ---------- reward toast ---------- */
   let toastTimer = null;
@@ -761,7 +920,6 @@
     let t = document.getElementById('rewardToast');
     if(!t){ t = document.createElement('div'); t.id = 'rewardToast'; document.body.appendChild(t); }
     t.textContent = msg;
-    // retrigger the squash-and-stretch pop even if a toast is already showing
     t.classList.remove('show');
     void t.offsetWidth;
     t.classList.add('show');
@@ -769,8 +927,7 @@
     toastTimer = setTimeout(()=>t.classList.remove('show'), 4200);
   }
 
-  /* ---------- level-clear gift rewards — tied directly to clearing a Learn Mode level, ---------- */
-  /* so they're easy to find (shown right on the end screen), not a hidden separate XP track. */
+  /* ---------- level-clear gift rewards ---------- */
   const LEVEL_REWARDS = {
     1:{coins:15, skins:[]},
     2:{coins:15, skins:[]},
@@ -780,30 +937,33 @@
     6:{coins:25, skins:[]},
     7:{coins:30, skins:[]},
     8:{coins:30, skins:[]},
-    9:{coins:40, skins:[{type:'backdrop', id:'sky'}]},
+    9:{coins:40, gems:5, skins:[{type:'backdrop', id:'sky'}]},
     10:{coins:40, skins:[{type:'char', id:'violet'}]},
     11:{coins:45, skins:[]},
     12:{coins:45, skins:[{type:'stair', id:'jungle'}]},
-    13:{coins:50, skins:[]},
+    13:{coins:50, gems:5, skins:[]},
     14:{coins:55, skins:[{type:'stair', id:'volcanic'}]},
     15:{coins:60, skins:[{type:'char', id:'shadow'}]},
-    16:{coins:100, skins:[{type:'char', id:'nova'},{type:'stair', id:'neon'},{type:'backdrop', id:'aurora'}]}
+    16:{coins:100, gems:15, skins:[{type:'char', id:'nova'},{type:'stair', id:'neon'},{type:'backdrop', id:'aurora'}]}
   };
-  // Free Mode is the competitive/leaderboard mode, so it gets its own reward track keyed off
-  // best steps-climbed rather than level clears — climbing higher unlocks its own cosmetics.
   const FREE_MODE_REWARDS = [
     { score:20,  coins:30, skins:[{type:'char', id:'crimson'}] },
     { score:45,  coins:50, skins:[{type:'stair', id:'obsidian'}] },
-    { score:75,  coins:70, skins:[{type:'backdrop', id:'dusk'}] },
-    { score:120, coins:120, skins:[{type:'char', id:'starlit'}] }
+    { score:75,  coins:70, gems:10, skins:[{type:'backdrop', id:'dusk'}] },
+    { score:120, coins:120, gems:20, skins:[{type:'char', id:'starlit'}] }
+  ];
+  // Combo-streak rewards, checked live during a run — kept separate from level/free-mode
+  // milestones since these fire mid-run rather than at the end.
+  const COMBO_MILESTONES = [
+    { combo:20, type:'heart', label:'+1 bonus heart' },
+    { combo:35, type:'revive', label:'free revive earned' },
+    { combo:50, type:'skin', category:'char', id:'comet', label:'Comet skin unlocked' }
   ];
   function grantSkin(type, id){
     if(type==='char' && !save.ownedCharSkins.includes(id)) save.ownedCharSkins.push(id);
     if(type==='stair' && !save.ownedStairSkins.includes(id)) save.ownedStairSkins.push(id);
     if(type==='backdrop' && !save.ownedBackdrops.includes(id)) save.ownedBackdrops.push(id);
   }
-  // Back-fills completedLevels for players who cleared levels before this system existed —
-  // any level below the current unlock point, or with recorded stars, counts as completed.
   function backfillCompletedLevels(){
     if(!save.completedLevels) save.completedLevels = {};
     LEVELS.forEach(lvl=>{
@@ -822,6 +982,7 @@
         const r = LEVEL_REWARDS[id];
         let msg = `🎁 Level ${id} clear reward:`;
         if(r.coins){ save.coins += r.coins; msg += ` +${r.coins} coins`; }
+        if(r.gems){ save.gems += r.gems; msg += ` +${r.gems} gems`; }
         (r.skins||[]).forEach(sk=>{ grantSkin(sk.type, sk.id); msg += ` · new ${sk.type} skin`; });
         save.claimedLevelRewards[id] = true;
         msgs.push(msg);
@@ -841,6 +1002,7 @@
       if(save.bestScoreFree >= r.score && !save.claimedFreeRewards[r.score]){
         let msg = `🎁 ${r.score}-step milestone:`;
         if(r.coins){ save.coins += r.coins; msg += ` +${r.coins} coins`; }
+        if(r.gems){ save.gems += r.gems; msg += ` +${r.gems} gems`; }
         (r.skins||[]).forEach(sk=>{ grantSkin(sk.type, sk.id); msg += ` · new ${sk.type} skin`; });
         save.claimedFreeRewards[r.score] = true;
         msgs.push(msg);
@@ -854,9 +1016,33 @@
     return msgs;
   }
 
+  /* ---------- gift codes ---------- */
+  const GIFT_CODES = {
+    'devpower': { desc: 'unlocks every skin in the game' },
+    'newone':   { desc: 'unlocks the Aetherial Drift backdrop' }
+  };
+  function grantAllSkins(){
+    CHAR_SKINS.forEach(s=>grantSkin('char', s.id));
+    STAIR_SKINS.forEach(s=>grantSkin('stair', s.id));
+    BACKDROPS.forEach(s=>grantSkin('backdrop', s.id));
+  }
+  function redeemGiftCode(raw){
+    const code = (raw||'').trim().toLowerCase();
+    const statusEl = document.getElementById('giftStatusMsg');
+    if(!code){ statusEl.style.color='var(--text-dim)'; statusEl.textContent='Type a code first.'; return; }
+    if(!GIFT_CODES[code]){ statusEl.style.color='var(--danger)'; statusEl.textContent='That code is not valid.'; return; }
+    if(save.redeemedCodes.includes(code)){ statusEl.style.color='var(--text-dim)'; statusEl.textContent='Already redeemed on this account.'; return; }
+    if(code === 'devpower'){ grantAllSkins(); }
+    if(code === 'newone'){ grantSkin('backdrop', 'aetherial'); }
+    save.redeemedCodes.push(code);
+    persistSave();
+    refreshHud();
+    statusEl.style.color='var(--glow)';
+    statusEl.textContent = `Code redeemed — ${GIFT_CODES[code].desc}.`;
+    showToast(`🎁 Code "${code}" redeemed!`);
+  }
+
   /* ---------- skins ---------- */
-  // Items have EITHER a coin cost (buyable in the shop) OR an `unlock` (only earned by
-  // clearing that Learn Mode level) — never both, so level rewards can't just be bought.
   const CHAR_SKINS = [
     { id:'default', name:'Amber', cost:0, head:'radial-gradient(circle at 40% 30%,#fff,#ffb84d 60%,#b8701a)', torso:'linear-gradient(180deg,#ffce85,#ffb84d)', leg:'#c97f1e' },
     { id:'cool', name:'Glacier', cost:60, head:'radial-gradient(circle at 40% 30%,#fff,#7fd8ff 60%,#2b8fbf)', torso:'linear-gradient(180deg,#bfeeff,#7fd8ff)', leg:'#3aa0cf' },
@@ -864,11 +1050,14 @@
     { id:'coral', name:'Coral', cost:90, head:'radial-gradient(circle at 40% 30%,#fff,#ff9d8f 60%,#d9503c)', torso:'linear-gradient(180deg,#ffcfc4,#ff9d8f)', leg:'#e06a4f' },
     { id:'mint', name:'Mint', cost:90, head:'radial-gradient(circle at 40% 30%,#fff,#8fffc4 60%,#2fb87a)', torso:'linear-gradient(180deg,#c8ffe0,#8fffc4)', leg:'#3fcf8f' },
     { id:'violet', name:'Violet', unlock:{type:'level', id:10}, head:'radial-gradient(circle at 40% 30%,#fff,#c58cff 60%,#7b3fc9)', torso:'linear-gradient(180deg,#e6cfff,#c58cff)', leg:'#8b4fd6' },
-    { id:'crimson', name:'Crimson', unlock:{type:'freeScore', value:20}, head:'radial-gradient(circle at 40% 30%,#fff,#ff5c7a 60%,#a3163d)', torso:'linear-gradient(180deg,#ff9fb2,#ff5c7a)', leg:'#c22b52' },
+    { id:'crimson', name:'Crimson', unlock:{type:'freeScore', value:20}, glow:'#ff5c7a', head:'radial-gradient(circle at 40% 30%,#fff,#ff5c7a 60%,#a3163d)', torso:'linear-gradient(180deg,#ff9fb2,#ff5c7a)', leg:'#c22b52' },
     { id:'shadow', name:'Shadow', unlock:{type:'level', id:15}, head:'radial-gradient(circle at 40% 30%,#8f8fb0,#2c2c40 60%,#111119)', torso:'linear-gradient(180deg,#4a4a63,#22222f)', leg:'#1a1a24' },
-    { id:'starlit', name:'Starlit', unlock:{type:'freeScore', value:120}, head:'radial-gradient(circle at 35% 30%,#fff,#dfe8ff 45%,#8fa0ff 75%,#4a5fd6)', torso:'linear-gradient(180deg,#eef1ff,#a8b6ff)', leg:'#5f6fdb' },
-    { id:'nova', name:'Nova', unlock:{type:'level', id:16}, head:'radial-gradient(circle at 40% 30%,#fff,#ffe27a 55%,#ffb100)', torso:'linear-gradient(180deg,#fff3c4,#ffd15c)', leg:'#e0a422' }
+    { id:'starlit', name:'Starlit', unlock:{type:'freeScore', value:120}, glow:'#a8b6ff', head:'radial-gradient(circle at 35% 30%,#fff,#dfe8ff 45%,#8fa0ff 75%,#4a5fd6)', torso:'linear-gradient(180deg,#eef1ff,#a8b6ff)', leg:'#5f6fdb' },
+    { id:'nova', name:'Nova', unlock:{type:'level', id:16}, glow:'#ffe27a', head:'radial-gradient(circle at 40% 30%,#fff,#ffe27a 55%,#ffb100)', torso:'linear-gradient(180deg,#fff3c4,#ffd15c)', leg:'#e0a422' },
+    { id:'comet', name:'Comet', unlock:{type:'combo', value:50}, glow:'#7ee0ff', head:'radial-gradient(circle at 35% 30%,#fff,#c9f7ff 45%,#7ee0ff 75%,#2fb8e0)', torso:'linear-gradient(180deg,#e4fbff,#8fe8ff)', leg:'#4fc7e6' },
+    { id:'celestia', name:'Celestia', gemCost:35, glow:'#ff8ce8', head:'radial-gradient(circle at 35% 28%,#fff,#ffe0fb 30%,#ff9cf0 60%,#c34fe0 85%)', torso:'linear-gradient(180deg,#ffe6fb,#ff9cf0 55%,#d158e0)', leg:'#b23fc9' }
   ];
+  const SHINY_STAIRS = ['obsidian','neon','gilded'];
   const STAIR_SKINS = [
     { id:'default', name:'Nightfall', cost:0, tread:'#2a3350', treadEdge:'#3a4568', riser:'#141a2c', glow:'#3effb2' },
     { id:'sunset', name:'Sunset', cost:60, tread:'#4a2f3d', treadEdge:'#6b3f52', riser:'#2a1620', glow:'#ff9a5c' },
@@ -877,25 +1066,29 @@
     { id:'jungle', name:'Jungle', unlock:{type:'level', id:12}, tread:'#233d2e', treadEdge:'#345643', riser:'#12211a', glow:'#c8ff5c' },
     { id:'volcanic', name:'Volcanic', unlock:{type:'level', id:14}, tread:'#3d2320', treadEdge:'#5c322c', riser:'#1c0f0d', glow:'#ff6a3d' },
     { id:'obsidian', name:'Obsidian', unlock:{type:'freeScore', value:45}, tread:'#191c26', treadEdge:'#262b3a', riser:'#0a0b10', glow:'#c9a8ff' },
-    { id:'neon', name:'Neon', unlock:{type:'level', id:16}, tread:'#231a3d', treadEdge:'#382a5c', riser:'#120c1f', glow:'#ff4de0' }
+    { id:'neon', name:'Neon', unlock:{type:'level', id:16}, tread:'#231a3d', treadEdge:'#382a5c', riser:'#120c1f', glow:'#ff4de0' },
+    { id:'gilded', name:'Gilded', gemCost:30, tread:'#4a3f24', treadEdge:'#7a6534', riser:'#221b0d', glow:'#ffe27a' }
   ];
   const BACKDROPS = [
     { id:'void', name:'Void', cost:0 },
     { id:'sky', name:'Open Sky', unlock:{type:'level', id:9}, sound:true },
     { id:'dusk', name:'Dusk Horizon', unlock:{type:'freeScore', value:75} },
-    { id:'aurora', name:'Aurora Night', unlock:{type:'level', id:16} }
+    { id:'aurora', name:'Aurora Night', unlock:{type:'level', id:16} },
+    { id:'aetherial', name:'Aetherial Drift', gemCost:40, sound:true }
   ];
 
   // "packs": a backdrop can force its own stair colors, like Open Sky's grass look
   const PACK_STAIR_OVERRIDE = {
-    sky: { tread:'#3f7a45', treadEdge:'#5aa15f', riser:'#1f3d22', glow:'#d4ff6a' }
+    sky: { tread:'#3f7a45', treadEdge:'#5aa15f', riser:'#1f3d22', glow:'#d4ff6a' },
+    aetherial: { tread:'#5c4a6e', treadEdge:'#7a6690', riser:'#2e2440', glow:'#ffd9a3' }
   };
 
   function applyBackdrop(id){
-    document.body.classList.remove('theme-sky','theme-aurora','theme-dusk');
+    document.body.classList.remove('theme-sky','theme-aurora','theme-dusk','theme-aetherial');
     if(id === 'sky') document.body.classList.add('theme-sky');
     if(id === 'aurora') document.body.classList.add('theme-aurora');
     if(id === 'dusk') document.body.classList.add('theme-dusk');
+    if(id === 'aetherial') document.body.classList.add('theme-aetherial');
     buildSkyLayer(id);
     if(PACK_STAIR_OVERRIDE[id]){
       const p = PACK_STAIR_OVERRIDE[id];
@@ -970,7 +1163,6 @@
         spark.style.animationDelay = (-Math.random()*4)+'s';
         layer.appendChild(spark);
       }
-      // one soft sun-glow low on the horizon
       const sun = document.createElement('div');
       sun.style.position='absolute'; sun.style.left='50%'; sun.style.bottom='8%';
       sun.style.width='140px'; sun.style.height='140px'; sun.style.marginLeft='-70px';
@@ -978,6 +1170,57 @@
       sun.style.background='radial-gradient(circle, rgba(255,220,160,0.55), transparent 70%)';
       sun.style.filter='blur(4px)';
       layer.appendChild(sun);
+    } else if(id === 'aetherial'){
+      // signature backdrop: warm low sun with soft rotating light rays, drifting clouds both
+      // in front of AND behind the stairs/climber for depth, and glowing light motes rising
+      // gently through the scene — replaces the earlier floating-islands version.
+      const rays = document.createElement('div');
+      rays.className = 'sun-rays';
+      rays.style.top = '6%';
+      layer.appendChild(rays);
+
+      const sun = document.createElement('div');
+      sun.className = 'sun-orb';
+      sun.style.width = '210px'; sun.style.height='210px'; sun.style.marginLeft='-105px'; sun.style.top='6%';
+      layer.appendChild(sun);
+
+      const behindLayer = document.createElement('div');
+      behindLayer.style.position='absolute'; behindLayer.style.inset='0'; behindLayer.style.zIndex='0';
+      const frontLayer = document.createElement('div');
+      frontLayer.style.position='absolute'; frontLayer.style.inset='0'; frontLayer.style.zIndex='2';
+      layer.style.zIndex='0';
+
+      function makeCloud(){
+        const c = document.createElement('div');
+        c.className = 'a-cloud';
+        const w = 90+Math.random()*130;
+        c.style.width=w+'px'; c.style.height=(w*0.4)+'px';
+        c.style.top=(8+Math.random()*60)+'%';
+        c.style.left=(Math.random()*100)+'%';
+        c.style.animationDuration=(40+Math.random()*35)+'s';
+        c.style.animationDelay=(-Math.random()*50)+'s';
+        return c;
+      }
+      for(let i=0;i<3;i++) behindLayer.appendChild(makeCloud());
+      for(let i=0;i<3;i++) frontLayer.appendChild(makeCloud());
+
+      function makeMote(front){
+        const m = document.createElement('div');
+        m.className = 'aether-mote';
+        const size = front ? (4+Math.random()*4) : (2+Math.random()*2.5);
+        m.style.width = size+'px'; m.style.height = size+'px';
+        m.style.left = (Math.random()*100)+'%';
+        m.style.bottom = (-10-Math.random()*30)+'px';
+        m.style.setProperty('--drift', (Math.random()*80-40)+'px');
+        m.style.animationDuration = (front ? (6+Math.random()*5) : (9+Math.random()*6))+'s';
+        m.style.animationDelay = (-Math.random()*10)+'s';
+        return m;
+      }
+      for(let i=0;i<10;i++) behindLayer.appendChild(makeMote(false));
+      for(let i=0;i<8;i++) frontLayer.appendChild(makeMote(true));
+
+      layer.appendChild(behindLayer);
+      layer.appendChild(frontLayer);
     }
   }
 
@@ -995,6 +1238,12 @@
     document.querySelector('#climber .torso').style.background = s.torso;
     document.querySelector('#climber .legL').style.background = s.leg;
     document.querySelector('#climber .legR').style.background = s.leg;
+    if(s.glow){
+      climberEl.classList.add('shiny');
+      climberEl.style.setProperty('--skin-glow', s.glow);
+    } else {
+      climberEl.classList.remove('shiny');
+    }
   }
 
   /* ---------- word pools ---------- */
@@ -1041,8 +1290,6 @@
     AZ.forEach((c,i)=>{ if(i%2===0) odds.push(c); else evens.push(c); });
     return odds.concat(evens);
   }
-  // World names kept plain and literal — a difficulty ladder anyone recognizes at a glance,
-  // no invented lore to decode.
   const WORLD_NAMES = { 1:'World 1 — Beginner', 2:'World 2 — Intermediate', 3:'World 3 — Advanced', 4:'World 4 — Expert' };
 
   const LEVELS = [
@@ -1083,6 +1330,8 @@
   const playerLevelTag = document.getElementById('playerLevelTag');
   const coinsVal = document.getElementById('coinsVal');
   const coinsVal2 = document.getElementById('coinsVal2');
+  const gemsVal = document.getElementById('gemsVal');
+  const gemsVal2 = document.getElementById('gemsVal2');
 
   const mainMenu = document.getElementById('mainMenu');
   const levelSelect = document.getElementById('levelSelect');
@@ -1093,12 +1342,13 @@
   const endExtra = document.getElementById('endExtra');
   const finalScoreEl = document.getElementById('finalScore');
   const freeLockMsg = document.getElementById('freeLockMsg');
+  const reviveScreen = document.getElementById('reviveScreen');
 
   /* ---------- stair geometry (flat oblique projection, drawn in SVG) ---------- */
   const VISIBLE_STEPS = 7;
   const TREAD_W = 190, RISER_H = 50, DEPTH_DX = 78, DEPTH_DY = 16;
   const ORIGIN_X = 185, ORIGIN_Y = 430;
-  const PARALLAX_BEHIND_FACTOR = 0.5; // steps already climbed drift at half the active step's speed
+  const PARALLAX_BEHIND_FACTOR = 0.5;
 
   function stepAnchor(i){
     return { x: ORIGIN_X + i*DEPTH_DX, y: ORIGIN_Y - i*(RISER_H+DEPTH_DY) };
@@ -1112,15 +1362,13 @@
 
   function drawStairs(){
     stairSvg.innerHTML = "";
-    // split into two groups so already-climbed ("behind") steps can drift at a different
-    // rate than the active+upcoming steps during the climb transition — a cheap parallax cue.
     const groupActive = svgEl('g', { id:'stepsGroupActive' });
     const groupBehind = svgEl('g', { id:'stepsGroupBehind' });
     const BEHIND_STEPS = 3;
     for(let i=VISIBLE_STEPS-1;i>=-BEHIND_STEPS;i--){
       const stepNum = state.currentStepIndex + i;
       if(stepNum < 0) continue;
-      if(i >= 1 && state.mode.words[stepNum] === undefined) continue; // only skip far-ahead upcoming steps — the active step (i=0) and behind steps always draw
+      if(i >= 1 && state.mode.words[stepNum] === undefined) continue;
       const a = stepAnchor(i);
       const fadeOpacity = Math.min(1, Math.max(1 - i*0.09, 0.35));
       const isActive = i===0;
@@ -1144,13 +1392,15 @@
         tread.setAttribute('id','activeTread');
         tread.setAttribute('stroke', 'var(--glow)');
         tread.setAttribute('stroke-width','2');
+        if(SHINY_STAIRS.includes(save.equippedStairSkin)){
+          tread.classList.add('shiny');
+        }
       }
 
       const targetGroup = i < 0 ? groupBehind : groupActive;
       targetGroup.appendChild(riser);
       targetGroup.appendChild(tread);
     }
-    // painted back-to-front: far/behind group first, active+upcoming group on top
     stairSvg.appendChild(groupBehind);
     stairSvg.appendChild(groupActive);
     positionClimber();
@@ -1162,7 +1412,6 @@
       const bbox = activeEl.getBBox();
       return { cx: bbox.x + bbox.width/2, cy: bbox.y + bbox.height/2 };
     }
-    // fallback formula — only used if the active tread somehow failed to render
     const a = stepAnchor(0);
     return { cx: a.x + TREAD_W/2 + DEPTH_DX/2, cy: a.y - RISER_H - DEPTH_DY/2 };
   }
@@ -1209,7 +1458,8 @@
   function renderHearts(){
     heartsEl.innerHTML = "";
     const lives = state ? state.lives : 3;
-    for(let i=0;i<3;i++){
+    const slots = Math.max(3, lives); // bonus hearts from combo rewards can push past 3
+    for(let i=0;i<slots;i++){
       const h = document.createElement('span');
       h.textContent = '♥';
       h.style.color = i >= lives ? '#3a3f52' : 'var(--danger)';
@@ -1220,12 +1470,20 @@
   function refreshHud(){
     playerLevelTag.textContent = save.level;
     coinsVal.textContent = save.coins;
-    coinsVal2.textContent = save.coins;
+    if(coinsVal2) coinsVal2.textContent = save.coins;
+    if(gemsVal) gemsVal.textContent = save.gems;
+    if(gemsVal2) gemsVal2.textContent = save.gems;
     if(state && state.mode.type === 'free'){
       bestTagEl.textContent = 'BEST ' + save.bestScoreFree;
     } else {
       bestTagEl.textContent = '';
     }
+  }
+
+  /* ---------- HUD play/menu mode: shop/gift/account/leaderboard buttons only show
+     on the home screen, never while a run is actually in progress ---------- */
+  function setHudPlaying(isPlaying){
+    document.getElementById('hud').classList.toggle('in-game', !!isPlaying);
   }
 
   function buildScene(){
@@ -1237,8 +1495,6 @@
   }
 
   function buildFlameRow(){
-    // Size the glow to the word's own rendered width/height so it reads as one flame
-    // wrapping around the word, scaling automatically with word length.
     const rect = wordBanner.getBoundingClientRect();
     const w = Math.max(70, rect.width + 60);
     const h = Math.max(60, rect.height + 50);
@@ -1267,8 +1523,6 @@
     wordTimerFill.style.transform = 'scaleX(0)';
   }
 
-  /* ---------- pace ghost — an optional marker showing where your best Free Mode run ---------- */
-  /* stood on this same step, so you can see whether you're ahead of or behind your own pace. */
   const ghostMarkerEl = document.getElementById('ghostMarker');
   function updateGhostMarker(){
     if(!ghostMarkerEl) return;
@@ -1329,8 +1583,6 @@
     setTimeout(()=>{ climberEl.classList.remove('stepping'); climberEl.classList.add('idle'); }, 320);
   }
 
-  // Combo tiers — kept to a small, coherent progression rather than a rainbow of colors.
-  // New tiers (e.g. a 5th "Celestial" or 6th "Sun" rank) can be appended here later.
   const COMBO_TIERS = [
     { min:3,  mult:2, name:'Frost', color:'#5fc9ff', cls:'flame-t2' },
     { min:7,  mult:3, name:'Nova',  color:'#c58cff', cls:'flame-t3' },
@@ -1372,6 +1624,27 @@
     }
   }
 
+  // Checks the combo-streak reward table against the run's current combo, granting each
+  // milestone at most once per run (state.claimedComboThisRun).
+  function checkComboMilestones(){
+    COMBO_MILESTONES.forEach(m=>{
+      if(state.combo !== m.combo) return;
+      if(state.claimedComboThisRun[m.combo]) return;
+      state.claimedComboThisRun[m.combo] = true;
+      if(m.type === 'heart'){
+        state.lives += 1;
+        renderHearts();
+      } else if(m.type === 'revive'){
+        state.freeRevives = (state.freeRevives||0) + 1;
+      } else if(m.type === 'skin'){
+        const firstTime = !save.claimedComboRewards[m.combo];
+        grantSkin(m.category, m.id);
+        if(firstTime){ save.claimedComboRewards[m.combo] = true; persistSave(); }
+      }
+      showToast(`🔥 ${m.combo}-streak: ${m.label}!`);
+    });
+  }
+
   function onCorrectStep(){
     clearTimeout(state.timerHandle);
     spawnAura();
@@ -1380,7 +1653,6 @@
     playStepAnim();
     playCompleteChime();
 
-    // record how long this word took, for the pace-ghost feature on future Free Mode runs
     if(state.mode.type === 'free' && state.currentWordStartTime){
       state.stepDurations[state.currentStepIndex] = Date.now() - state.currentWordStartTime;
     }
@@ -1391,12 +1663,11 @@
     scoreValEl.textContent = state.score;
     updateComboDisplay();
     updateFlameState();
+    checkComboMilestones();
 
     state.typed = "";
     state.locked = true;
 
-    // parallax: active+upcoming steps move the full step distance, already-climbed ("behind")
-    // steps move at a fraction of that — a cheap depth cue during the climb transition.
     const groupActive = document.getElementById('stepsGroupActive');
     const groupBehind = document.getElementById('stepsGroupBehind');
     if(groupActive){
@@ -1412,11 +1683,15 @@
       state.currentStepIndex++;
       state.locked = false;
       const finished = (state.mode.type !== 'free') && (state.currentStepIndex >= (state.mode.type==='sequence'?state.mode.sequence.length:state.mode.count));
-      buildScene(); // always resync stairs + climber, even on the final step, before deciding what happens next
+      buildScene();
       if(finished){ levelComplete(); return; }
       startTimerForStep();
     }, 320);
   }
+
+  // Revive pricing ramps up with each revive used in the current run.
+  const REVIVE_BASE_COST = 20, REVIVE_COST_STEP = 15;
+  function reviveCost(){ return REVIVE_BASE_COST + (state.revivesUsed||0)*REVIVE_COST_STEP; }
 
   function onFail(){
     clearTimeout(state.timerHandle);
@@ -1429,9 +1704,58 @@
     state.multiplier = 1;
     updateComboDisplay();
     updateFlameState();
-    if(state.lives <= 0){ endGame(false); }
+    if(state.lives <= 0){
+      // Free Mode stays purely competitive — no paid revives there. Learn Mode levels can
+      // be revived with coins (or a free-revive earned from a combo streak this run).
+      if(state.mode.type !== 'free'){ offerRevive(); }
+      else { endGame(false); }
+    }
     else { renderWordBanner(); startTimerForStep(); }
   }
+
+  function offerRevive(){
+    clearTimeout(state.timerHandle);
+    document.getElementById('reviveScoreShown').textContent = state.currentStepIndex;
+    const desc = document.getElementById('reviveDesc');
+    const btn = document.getElementById('reviveAcceptBtn');
+    if(state.freeRevives > 0){
+      desc.textContent = 'You earned a free revive from your combo streak!';
+      btn.textContent = 'REVIVE (FREE)';
+      btn.classList.remove('locked');
+    } else {
+      const cost = reviveCost();
+      desc.textContent = 'Pay coins to get back up and keep climbing?';
+      btn.textContent = `REVIVE (🪙${cost})`;
+      if(save.coins < cost) btn.classList.add('locked'); else btn.classList.remove('locked');
+    }
+    reviveScreen.classList.remove('hidden');
+  }
+
+  function acceptRevive(){
+    if(state.freeRevives > 0){
+      state.freeRevives -= 1;
+    } else {
+      const cost = reviveCost();
+      if(save.coins < cost) return;
+      save.coins -= cost;
+      persistSave();
+      refreshHud();
+    }
+    state.revivesUsed = (state.revivesUsed||0) + 1;
+    state.lives = 1;
+    reviveScreen.classList.add('hidden');
+    renderHearts();
+    renderWordBanner();
+    startTimerForStep();
+  }
+
+  function declineRevive(){
+    reviveScreen.classList.add('hidden');
+    endGame(false);
+  }
+
+  document.getElementById('reviveAcceptBtn').addEventListener('click', acceptRevive);
+  document.getElementById('reviveDeclineBtn').addEventListener('click', declineRevive);
 
   function endGame(won){
     state.running = false;
@@ -1460,7 +1784,7 @@
       const stepsPerSecond = state.currentStepIndex / elapsedSec;
       submitLeaderboardScore(stepsPerSecond, state.score);
     } else if(won){
-      const stars = state.lives;
+      const stars = Math.min(3, state.lives);
       const prevStars = save.levelStars[state.mode.levelId] || 0;
       if(stars > prevStars) save.levelStars[state.mode.levelId] = stars;
       if(state.mode.levelId === save.unlockedLevel && save.unlockedLevel < LEVELS.length){
@@ -1488,9 +1812,11 @@
     const rewardMsgs = checkLevelRewards(true).concat(state.mode.type === 'free' ? checkFreeModeRewards(true) : []);
     if(rewardMsgs.length) showToast(rewardMsgs.join('\n'));
     refreshHud();
+    setHudPlaying(false);
 
     finalScoreEl.textContent = state.score;
-    endExtra.textContent = `+${xpGain} XP  ·  +${coinGain} coins` + (rewardMsgs.length ? '\n' + rewardMsgs.join('\n') : '');
+    const reviveNote = state.revivesUsed ? `\nrevives used: ${state.revivesUsed}` : '';
+    endExtra.textContent = `+${xpGain} XP  ·  +${coinGain} coins` + (rewardMsgs.length ? '\n' + rewardMsgs.join('\n') : '') + reviveNote;
     endScreen.classList.remove('hidden');
   }
 
@@ -1501,6 +1827,7 @@
     levelSelect.classList.add('hidden');
     shopScreen.classList.add('hidden');
     endScreen.classList.add('hidden');
+    reviveScreen.classList.add('hidden');
     climberEl.classList.remove('stepping','landed','falling');
     climberEl.classList.add('idle');
     climberEl.style.opacity = '';
@@ -1509,9 +1836,11 @@
       running:true, score:0, lives:3, combo:0, multiplier:1,
       currentStepIndex:0, typed:"", timerHandle:null, startTime: Date.now(),
       currentWordStartTime: null, stepDurations: [],
+      revivesUsed:0, freeRevives:0, claimedComboThisRun:{},
       mode: Object.assign({ words: [], bags:{} }, mode)
     };
     syncWind();
+    setHudPlaying(true);
     modeTagEl.textContent = mode.type === 'free' ? 'FREE' : (mode.label ? mode.label.toUpperCase() : '');
     scoreValEl.textContent = "0";
     renderHearts();
@@ -1523,6 +1852,7 @@
 
   document.addEventListener('keydown', (e)=>{
     if(!state || !state.running || state.locked) return;
+    if(!reviveScreen.classList.contains('hidden')) return;
     const isChar = e.key.length === 1 && /[a-zA-Z ]/.test(e.key);
     if(!isChar) return;
     const target = state.mode.words[state.currentStepIndex];
@@ -1542,6 +1872,16 @@
     stairScene.style.transform = `perspective(1200px) rotateY(${nx*7}deg) rotateX(${-ny*5}deg)`;
   });
 
+  /* ---------- stop any active run before opening shop/gift/account/leaderboard ---------- */
+  function stopRunIfActive(){
+    if(state && state.running){
+      state.running = false;
+      clearTimeout(state.timerHandle);
+      syncWind();
+    }
+    setHudPlaying(false);
+  }
+
   /* ---------- menus ---------- */
   function renderGauge(container, size){
     const R = size/2 - 8, cx = size/2, cy = size/2 + 2;
@@ -1559,6 +1899,7 @@
   function refreshMenu(){
     renderGauge(document.getElementById('menuGaugeWrap'), 160);
     document.getElementById('menuCoins').textContent = save.coins;
+    document.getElementById('menuGems').textContent = save.gems;
     document.getElementById('menuBest').textContent = save.bestScoreFree;
     if(save.level < FREE_MODE_MIN_LEVEL){
       document.getElementById('freeModeBtn').classList.add('locked');
@@ -1576,6 +1917,7 @@
   }
 
   function openShop(){
+    stopRunIfActive();
     mainMenu.classList.add('hidden');
     buildShop();
     shopScreen.classList.remove('hidden');
@@ -1583,6 +1925,7 @@
   document.getElementById('menuShopBtn').addEventListener('click', openShop);
   document.getElementById('menuAuthBtn').addEventListener('click', openAccount);
   document.getElementById('menuLeaderboardBtn').addEventListener('click', ()=>{
+    stopRunIfActive();
     mainMenu.classList.add('hidden');
     document.getElementById('leaderboardScreen').classList.remove('hidden');
     loadLeaderboard();
@@ -1642,9 +1985,11 @@
   document.getElementById('menuBtn').addEventListener('click', ()=>{
     if(state){ state.running = false; clearTimeout(state.timerHandle); }
     syncWind();
+    setHudPlaying(false);
     endScreen.classList.add('hidden');
     levelSelect.classList.add('hidden');
     shopScreen.classList.add('hidden');
+    reviveScreen.classList.add('hidden');
     refreshMenu();
     mainMenu.classList.remove('hidden');
   });
@@ -1672,31 +2017,41 @@
       const isOwned = owned.includes(item.id);
       const isEquipped = equipped === item.id;
       const isLocked = !isOwned && !!item.unlock;
+      const isGemItem = !isOwned && !item.unlock && item.gemCost > 0;
       const card = document.createElement('div');
       card.className = 'shop-item';
       let swatchColor;
       if(shopTab==='character') swatchColor = item.torso;
       else if(shopTab==='stairs') swatchColor = `linear-gradient(180deg, ${item.treadEdge}, ${item.tread})`;
-      else swatchColor = item.id==='sky' ? 'linear-gradient(180deg,#7fc4f2,#eaf6ff)' : item.id==='aurora' ? 'linear-gradient(180deg,#2b1f4d,#0a0d16)' : 'linear-gradient(180deg,#131829,#0a0d16)';
+      else swatchColor = item.id==='sky' ? 'linear-gradient(180deg,#7fc4f2,#eaf6ff)' : item.id==='aurora' ? 'linear-gradient(180deg,#2b1f4d,#0a0d16)' : item.id==='aetherial' ? 'linear-gradient(180deg,#ff9d6c,#7f7fb8)' : 'linear-gradient(180deg,#131829,#0a0d16)';
       let btnLabel, btnClass;
       if(isEquipped){ btnLabel='Equipped'; btnClass='equipped'; }
       else if(isOwned){ btnLabel='Equip'; btnClass=''; }
       else if(isLocked){ btnLabel='Locked'; btnClass='locked-reward'; }
+      else if(isGemItem){ btnLabel='Buy'; btnClass='buy-gem'; }
       else { btnLabel='Buy'; btnClass='buy'; }
       const unlockNote = isLocked
-        ? `<div class="unlock-note">${item.unlock.type==='freeScore' ? `Reach ${item.unlock.value} steps in Free Mode to unlock` : `Clear Level ${item.unlock.id} to unlock`}</div>`
+        ? `<div class="unlock-note">${item.unlock.type==='freeScore' ? `Reach ${item.unlock.value} steps in Free Mode to unlock` : item.unlock.type==='combo' ? `Hit a ${item.unlock.value}-word combo streak to unlock` : `Clear Level ${item.unlock.id} to unlock`}</div>`
+        : '';
+      const priceLabel = (!isOwned && !isLocked)
+        ? (isGemItem ? ` · 💎${item.gemCost}` : (item.cost>0 ? ` · 🪙${item.cost}` : ''))
         : '';
       card.innerHTML = `
-        <div class="shop-swatch" style="background:${swatchColor}"></div>
-        <div class="name">${item.name}${item.sound?' 🔊':''}${(!isOwned && !isLocked && item.cost>0)?' · 🪙'+item.cost:''}</div>
+        <div class="shop-swatch${isGemItem?' shine':''}" style="background:${swatchColor}"></div>
+        <div class="name">${item.name}${item.sound?' 🔊':''}${priceLabel}</div>
         ${unlockNote}
         <button class="${btnClass}" ${isLocked?'disabled':''}>${btnLabel}</button>`;
       if(!isLocked){
         card.querySelector('button').addEventListener('click', ()=>{
           if(isEquipped) return;
           if(!isOwned){
-            if(save.coins < item.cost) return;
-            save.coins -= item.cost;
+            if(isGemItem){
+              if(save.gems < item.gemCost) return;
+              save.gems -= item.gemCost;
+            } else {
+              if(save.coins < item.cost) return;
+              save.coins -= item.cost;
+            }
             owned.push(item.id);
           }
           if(shopTab==='character'){ save.equippedCharSkin = item.id; applyCharSkin(item.id); }
@@ -1724,6 +2079,7 @@
   document.getElementById('shopBtn').addEventListener('click', openShop);
   document.getElementById('authBtn').addEventListener('click', openAccount);
   document.getElementById('leaderboardBtn').addEventListener('click', ()=>{
+    stopRunIfActive();
     mainMenu.classList.add('hidden');
     document.getElementById('leaderboardScreen').classList.remove('hidden');
     loadLeaderboard();
@@ -1760,6 +2116,28 @@
     buildShop();
   });
 
+  /* ---------- gift screen ---------- */
+  function openGifts(){
+    stopRunIfActive();
+    mainMenu.classList.add('hidden');
+    document.getElementById('giftInput').value = '';
+    document.getElementById('giftStatusMsg').textContent = '';
+    document.getElementById('giftScreen').classList.remove('hidden');
+  }
+  document.getElementById('menuGiftBtn').addEventListener('click', openGifts);
+  document.getElementById('giftRedeemBtn').addEventListener('click', ()=>{
+    redeemGiftCode(document.getElementById('giftInput').value);
+  });
+  document.getElementById('giftInput').addEventListener('keydown', (e)=>{
+    e.stopPropagation();
+    if(e.key === 'Enter') document.getElementById('giftRedeemBtn').click();
+  });
+  document.getElementById('giftBackBtn').addEventListener('click', ()=>{
+    document.getElementById('giftScreen').classList.add('hidden');
+    refreshMenu();
+    mainMenu.classList.remove('hidden');
+  });
+
   /* ---------- account screen ---------- */
   const accountScreen = document.getElementById('accountScreen');
   const nicknameInput = document.getElementById('nicknameInput');
@@ -1781,6 +2159,7 @@
     if(document.activeElement !== nicknameInput) nicknameInput.value = save.nickname || '';
     renderGauge(document.getElementById('accountGaugeWrap'), 150);
     document.getElementById('accountCoins').textContent = save.coins;
+    document.getElementById('accountGems').textContent = save.gems;
     document.getElementById('accountBest').textContent = save.bestScoreFree;
 
     leaderboardOptToggle.checked = !save.leaderboardOptOut;
@@ -1793,8 +2172,8 @@
       accountSignBtn.classList.add('secondary');
       accountStatusMsg.style.color = 'var(--glow)';
       accountStatusMsg.textContent = save.leaderboardOptOut
-        ? "You're hidden from the public leaderboard. Flip the toggle above any time to appear."
-        : "You're visible on the public leaderboard under your nickname.";
+        ? "You're hidden from the public leaderboard. Flip the toggle above any time to appear. If your name matches another player, the board shows a short tag so you can tell each other apart."
+        : "You're visible on the public leaderboard under your nickname. If your name matches another player, the board shows a short tag so you can tell each other apart.";
     } else {
       profileSub.textContent = 'Not signed in — progress is only saved on this device.';
       accountSignBtn.textContent = 'SIGN IN WITH GOOGLE';
@@ -1807,6 +2186,7 @@
   }
 
   function openAccount(){
+    stopRunIfActive();
     mainMenu.classList.add('hidden');
     refreshAccountScreen();
     accountScreen.classList.remove('hidden');
@@ -1856,9 +2236,9 @@
   refreshHud();
   refreshMenu();
   refreshAuthUI();
-  backfillCompletedLevels(); // makes sure levels cleared before this reward system existed still count
-  checkLevelRewards(); // grants any level-clear rewards not yet claimed, with a toast
-  checkFreeModeRewards(); // same, for Free Mode step milestones
+  backfillCompletedLevels();
+  checkLevelRewards();
+  checkFreeModeRewards();
   initMobileGate();
   startEmbers();
 })();
