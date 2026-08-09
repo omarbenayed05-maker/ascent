@@ -31,6 +31,8 @@
   #playerBadge b{ color:var(--amber); }
   #coinsTag{ display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:12px; color:var(--coin); }
   #shopBtn, #authBtn, #leaderboardBtn{ font-family:var(--mono); font-size:11px; letter-spacing:0.08em; color:var(--text); background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:6px; padding:6px 10px; cursor:pointer; }
+  #authBtn{ display:flex; align-items:center; gap:6px; }
+  #authBtn .authAvatar{ width:16px; height:16px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 1px rgba(255,255,255,0.2) inset; }
   .leaderboard-list{ display:flex; flex-direction:column; gap:6px; margin-top:4px; width:320px; max-height:44vh; overflow-y:auto; }
   .leaderboard-row{ display:flex; justify-content:space-between; align-items:center; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:8px; padding:9px 12px; font-family:var(--mono); font-size:12px; }
   .leaderboard-row .rank{ color:var(--amber); width:26px; }
@@ -179,6 +181,25 @@
   .shop-tab{ font-family:var(--mono); font-size:11px; padding:6px 14px; border-radius:6px; border:1px solid var(--panel-border); cursor:pointer; color:var(--text-dim); }
   .shop-tab.active{ color:var(--glow); border-color:var(--glow); }
 
+  .profile-card{ display:flex; align-items:center; gap:14px; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:14px; padding:16px 18px; width:340px; }
+  .avatar-circle{ width:58px; height:58px; border-radius:50%; flex-shrink:0; box-shadow: inset -4px -4px 8px rgba(0,0,0,0.3), inset 3px 3px 6px rgba(255,255,255,0.25), 0 0 0 2px var(--panel-border); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:700; font-size:20px; color:#0a0d16; }
+  .profile-info{ flex:1; text-align:left; min-width:0; }
+  .nickname-row{ display:flex; gap:6px; align-items:center; }
+  .nickname-input{ flex:1; min-width:0; background:var(--bg-deep); border:1px solid var(--panel-border); border-radius:6px; padding:9px 10px; font-family:var(--sans); font-weight:600; font-size:14px; color:var(--text); }
+  .nickname-input:focus{ outline:none; border-color:var(--glow); }
+  .profile-sub{ font-family:var(--mono); font-size:10.5px; color:var(--text-dim); margin-top:7px; line-height:1.5; }
+  .toggle-row{ display:flex; align-items:center; gap:12px; width:340px; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:12px; padding:13px 15px; text-align:left; }
+  .toggle-label{ flex:1; }
+  .toggle-label b{ display:block; font-size:12px; font-family:var(--sans); }
+  .toggle-label small{ display:block; font-size:10px; color:var(--text-dim); margin-top:3px; line-height:1.4; }
+  .toggle-switch{ position:relative; width:42px; height:24px; flex-shrink:0; }
+  .toggle-switch input{ opacity:0; width:0; height:0; position:absolute; }
+  .toggle-slider{ position:absolute; inset:0; background:#2a3350; border-radius:24px; cursor:pointer; transition:background 0.2s; }
+  .toggle-slider::before{ content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#e8eaf2; border-radius:50%; transition:transform 0.2s; }
+  .toggle-switch input:checked + .toggle-slider{ background:var(--glow); }
+  .toggle-switch input:checked + .toggle-slider::before{ transform:translateX(18px); background:#0a0d16; }
+  .toggle-switch input:disabled + .toggle-slider{ opacity:0.4; cursor:not-allowed; }
+
   #skyLayer{ position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; opacity:0; transition:opacity 0.6s; }
   body.theme-sky #hud, body.theme-sky #wordZone, body.theme-sky #prompt{ --text:#233246; --text-dim:#3f5570; }
   body.theme-sky #skyLayer{ opacity:1; }
@@ -216,7 +237,7 @@
       <div id="playerBadge">LV <b id="playerLevelTag">1</b></div>
       <div id="coinsTag">🪙<span id="coinsVal">0</span></div>
       <button id="shopBtn">SHOP</button>
-      <button id="authBtn">SIGN IN</button>
+      <button id="authBtn"><span class="authAvatar" id="authAvatarDot"></span><span id="authBtnLabel">ACCOUNT</span></button>
       <button id="leaderboardBtn">🏆</button>
     </div>
     <div id="hearts"></div>
@@ -285,6 +306,40 @@
     </div>
     <div class="shop-grid" id="shopGrid"></div>
     <button class="cta secondary" id="shopBackBtn">BACK</button>
+  </div>
+
+  <div id="accountScreen" class="overlay hidden">
+    <h1>ACC<span>OUNT</span></h1>
+    <div class="profile-card">
+      <div class="avatar-circle" id="avatarCircle">?</div>
+      <div class="profile-info">
+        <div class="nickname-row">
+          <input id="nicknameInput" class="nickname-input" maxlength="16" placeholder="Choose a nickname" />
+          <button class="cta secondary small" id="saveNicknameBtn">SAVE</button>
+        </div>
+        <div class="profile-sub" id="profileSub"></div>
+      </div>
+    </div>
+    <div class="gauge-wrap" id="accountGaugeWrap"></div>
+    <div class="menu-hud">
+      <div class="menu-hud-item">🪙 <span id="accountCoins">0</span></div>
+      <div class="menu-hud-item">🏆 Best <span id="accountBest">0</span></div>
+    </div>
+    <div class="toggle-row">
+      <label class="toggle-switch">
+        <input type="checkbox" id="leaderboardOptToggle" />
+        <span class="toggle-slider"></span>
+      </label>
+      <div class="toggle-label">
+        <b>Show me on the public leaderboard</b>
+        <small id="toggleSub">Off by default. Turn on to submit your best Free Mode run under your nickname.</small>
+      </div>
+    </div>
+    <p id="accountStatusMsg" style="font-size:11px;"></p>
+    <div class="menu-row">
+      <button class="cta" id="accountSignBtn">SIGN IN WITH GOOGLE</button>
+    </div>
+    <button class="cta secondary" id="accountBackBtn">BACK</button>
   </div>
 
   <div id="leaderboardScreen" class="overlay hidden">
@@ -404,7 +459,9 @@
       ownedCharSkins:['default'], equippedCharSkin:'default',
       ownedStairSkins:['default'], equippedStairSkin:'default',
       ownedBackdrops:['void'], equippedBackdrop:'void',
-      claimedLevelRewards:{}
+      claimedLevelRewards:{},
+      nickname:null,
+      leaderboardOptOut:true
     };
   }
   let save = defaultSave();
@@ -447,10 +504,16 @@
 
   function onAuthChanged(user){
     currentUser = user;
+    if(user && !save.nickname){
+      save.nickname = (user.displayName || 'Player').split(' ')[0].slice(0,16);
+      persistSave();
+    }
     refreshAuthUI();
     refreshMenu();
+    if(typeof refreshAccountScreen === 'function' && !accountScreenEl().classList.contains('hidden')) refreshAccountScreen();
     if(user) pullCloudSave(user.uid);
   }
+  function accountScreenEl(){ return document.getElementById('accountScreen'); }
   function signIn(){
     if(!fbReady()){ showToast('Firebase isn\'t set up yet — paste your project config into the code first.'); return; }
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -458,11 +521,19 @@
   }
   function signOutUser(){ if(fbAuth) fbAuth.signOut(); }
   function refreshAuthUI(){
-    const label = currentUser ? (currentUser.displayName || 'Account').split(' ')[0].toUpperCase() : 'SIGN IN';
-    const btn = document.getElementById('authBtn');
+    const shortLabel = save.nickname
+      ? save.nickname.toUpperCase().slice(0,10)
+      : (currentUser ? (currentUser.displayName||'Account').split(' ')[0].toUpperCase().slice(0,10) : 'ACCOUNT');
+    const labelEl = document.getElementById('authBtnLabel');
+    const dotEl = document.getElementById('authAvatarDot');
     const menuBtn = document.getElementById('menuAuthBtn');
-    if(btn) btn.textContent = label;
-    if(menuBtn) menuBtn.textContent = label;
+    if(labelEl) labelEl.textContent = shortLabel;
+    if(menuBtn) menuBtn.textContent = shortLabel;
+    if(dotEl){
+      const skin = (typeof CHAR_SKINS !== 'undefined') ? (CHAR_SKINS.find(s=>s.id===save.equippedCharSkin) || CHAR_SKINS[0]) : null;
+      dotEl.style.display = (save.nickname || currentUser) ? 'inline-block' : 'none';
+      if(skin) dotEl.style.background = skin.torso;
+    }
   }
 
   async function pullCloudSave(uid){
@@ -495,14 +566,20 @@
 
   async function submitLeaderboardScore(stepsPerSecond, score){
     if(!currentUser || !fbDb) return;
+    if(save.leaderboardOptOut) return;
     try{
       const ref = fbDb.collection('leaderboard').doc(currentUser.uid);
       const existing = await ref.get();
       const best = existing.exists ? (existing.data().stepsPerSecond || 0) : 0;
       if(stepsPerSecond > best){
-        await ref.set({ name: currentUser.displayName || 'Anonymous', stepsPerSecond, score, updatedAt: Date.now() });
+        await ref.set({ name: (save.nickname || currentUser.displayName || 'Anonymous'), stepsPerSecond, score, updatedAt: Date.now() });
       }
     }catch(e){ console.warn('Leaderboard submit failed', e); }
+  }
+
+  function removeFromLeaderboard(){
+    if(!currentUser || !fbDb) return;
+    fbDb.collection('leaderboard').doc(currentUser.uid).delete().catch(e=>console.warn('Leaderboard removal failed', e));
   }
 
   async function loadLeaderboard(){
@@ -731,9 +808,9 @@
 
   /* ---------- word pools ---------- */
   const POOLS = {
-    short:  ["cat","dog","run","sun","key","top","red","big","yes","new","one","two","far","hot","sky"],
-    medium: ["climb","stair","light","quick","spark","glass","storm","ghost","panel","frost","noble","raven"],
-    long:   ["ascension","gravity","staircase","momentum","corridor","threshold","luminous","cascade","velocity","fracture"]
+    short:  ["cat","dog","run","sun","key","top","red","big","yes","new","one","two","far","hot","sky","bee","cup","map","bag","car","fox","hat","ice","jam","kit","log","mud","net","owl","pen","rug","sea","tap","urn","van","wax","zoo","air","art","bat","bed","box","bus","can","cow","day","ear","egg","fan","fly","gas","gym","hen","ink","jar","lab","lid","mix","nap","oak","pad","pit","raw","sip","tub","use","vet","wig","yak","zip","ace","age","arm","bar","bay","bit","bud","cab","cap","cot","cub","cut","dam","den","dip","dot","dry","dye","elf","end","era","eve","fig","fin","fit","fog","fun","gap","gut","hip","hub","hut","jaw","jet","job","jog","jug","keg","lap","law","lit","lot","mat","mob","mop","nod","nut","oil","orb","pal","pea","peg","pet","pig","pod","pop","pot","pub","pug","ram","rat","rib","rim","rip","rob","rot","row","rub","rum","sad","sap","sat","saw","set","sit","ski","sob","sod","sow","spa","spy","tag","tan","tea","ten","tie","tin","tip","toe","ton","toy","try","tug","vow","wag","war","web","wet","win","wit"],
+    medium: ["climb","stair","light","quick","spark","glass","storm","ghost","panel","frost","noble","raven","blaze","cabin","coral","dance","eagle","feast","frame","giant","honey","igloo","jolly","knight","lemon","mango","ocean","piano","queen","rider","sable","tiger","uncle","vivid","whale","xenon","yield","zebra","amber","bloom","charm","delta","ember","flame","grove","haven","ivory","joker","knife","lunar","mirth","nudge","orbit","pearl","quilt","ridge","saint","teeth","ultra","vault","windy","yacht","zesty","acorn","brave","crisp","dwarf","field","grasp","humid","inbox","jumbo","karma","lodge","nymph","olive","plaza","quest","rally","scarf","tempo","unify","verse","witty","youth","brisk","chase","drift","ethos","fable","glide","hover","inlet","jelly","kneel","lofty","mossy","niche","opera","pouch","rapid","siren","toast","urban","vigor","wharf","aisle","blush","crane","dusty","essay","fudge","gnome","husky","judge","koala","latch","medal","pixel","riser","salsa","trace","urged","vapor","waltz"],
+    long:   ["ascension","gravity","staircase","momentum","corridor","threshold","luminous","cascade","velocity","fracture","skyline","horizon","plateau","boulder","crevice","avalanche","altitude","endeavor","triumph","anchor","vortex","tempest","wanderer","odyssey","pinnacle","zenith","paragon","citadel","labyrinth","cathedral","obsidian","phantom","eclipse","tsunami","blizzard","sanctuary","fortress","covenant","crescendo","infinity","gauntlet","marathon","resonance","whirlwind","cyclone","overture","radiance","serenity","tenacity","vigilant","catalyst","dominion","emissary","frontier","guardian","harmonic","illusion","juncture","kinetics","monolith","nocturne","paradise","quandary","reckless","symphony","turbulent","undertow","wavefront"]
   };
   POOLS.mixed = [].concat(POOLS.short, POOLS.medium, POOLS.long);
 
@@ -1251,9 +1328,7 @@
     shopScreen.classList.remove('hidden');
   }
   document.getElementById('menuShopBtn').addEventListener('click', openShop);
-  document.getElementById('menuAuthBtn').addEventListener('click', ()=>{
-    if(currentUser) signOutUser(); else signIn();
-  });
+  document.getElementById('menuAuthBtn').addEventListener('click', openAccount);
   document.getElementById('menuLeaderboardBtn').addEventListener('click', ()=>{
     mainMenu.classList.add('hidden');
     document.getElementById('leaderboardScreen').classList.remove('hidden');
@@ -1392,9 +1467,7 @@
     }
   }
   document.getElementById('shopBtn').addEventListener('click', openShop);
-  document.getElementById('authBtn').addEventListener('click', ()=>{
-    if(currentUser) signOutUser(); else signIn();
-  });
+  document.getElementById('authBtn').addEventListener('click', openAccount);
   document.getElementById('leaderboardBtn').addEventListener('click', ()=>{
     mainMenu.classList.add('hidden');
     document.getElementById('leaderboardScreen').classList.remove('hidden');
@@ -1430,6 +1503,86 @@
     document.getElementById('tabCharacter').classList.remove('active');
     document.getElementById('tabStairs').classList.remove('active');
     buildShop();
+  });
+
+  /* ---------- account screen ---------- */
+  const accountScreen = document.getElementById('accountScreen');
+  const nicknameInput = document.getElementById('nicknameInput');
+  const avatarCircle = document.getElementById('avatarCircle');
+  const leaderboardOptToggle = document.getElementById('leaderboardOptToggle');
+  const accountSignBtn = document.getElementById('accountSignBtn');
+  const accountStatusMsg = document.getElementById('accountStatusMsg');
+  const profileSub = document.getElementById('profileSub');
+
+  function displayName(){
+    return save.nickname || (currentUser ? (currentUser.displayName||'Player').split(' ')[0] : 'Guest');
+  }
+
+  function refreshAccountScreen(){
+    const skin = CHAR_SKINS.find(s=>s.id===save.equippedCharSkin) || CHAR_SKINS[0];
+    avatarCircle.style.background = skin.torso;
+    avatarCircle.textContent = displayName().charAt(0).toUpperCase() || '?';
+    if(document.activeElement !== nicknameInput) nicknameInput.value = save.nickname || '';
+    renderGauge(document.getElementById('accountGaugeWrap'), 150);
+    document.getElementById('accountCoins').textContent = save.coins;
+    document.getElementById('accountBest').textContent = save.bestScoreFree;
+
+    leaderboardOptToggle.checked = !save.leaderboardOptOut;
+    leaderboardOptToggle.disabled = !currentUser;
+
+    if(currentUser){
+      profileSub.textContent = `Signed in as ${currentUser.email || currentUser.displayName || 'your Google account'} · cloud saved`;
+      accountSignBtn.textContent = 'SIGN OUT';
+      accountSignBtn.classList.add('secondary');
+      accountStatusMsg.style.color = 'var(--glow)';
+      accountStatusMsg.textContent = save.leaderboardOptOut
+        ? "You're hidden from the public leaderboard. Flip the toggle above any time to appear."
+        : "You're visible on the public leaderboard under your nickname.";
+    } else {
+      profileSub.textContent = 'Not signed in — progress is only saved on this device.';
+      accountSignBtn.textContent = 'SIGN IN WITH GOOGLE';
+      accountSignBtn.classList.remove('secondary');
+      accountStatusMsg.style.color = 'var(--text-dim)';
+      accountStatusMsg.textContent = fbReady()
+        ? 'Sign in to back up your progress to the cloud and (optionally) join the leaderboard.'
+        : "Cloud accounts aren't configured for this game yet — your nickname and progress still save locally.";
+    }
+  }
+
+  function openAccount(){
+    mainMenu.classList.add('hidden');
+    refreshAccountScreen();
+    accountScreen.classList.remove('hidden');
+  }
+
+  document.getElementById('saveNicknameBtn').addEventListener('click', ()=>{
+    const val = nicknameInput.value.trim().slice(0,16);
+    save.nickname = val || null;
+    persistSave();
+    refreshAccountScreen();
+    refreshAuthUI();
+    showToast(val ? `Nickname set to "${val}"` : 'Nickname cleared');
+  });
+  nicknameInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') document.getElementById('saveNicknameBtn').click();
+    e.stopPropagation();
+  });
+
+  leaderboardOptToggle.addEventListener('change', ()=>{
+    save.leaderboardOptOut = !leaderboardOptToggle.checked;
+    persistSave();
+    if(save.leaderboardOptOut) removeFromLeaderboard();
+    refreshAccountScreen();
+    showToast(save.leaderboardOptOut ? '🙈 Hidden from the public leaderboard' : '🏆 Visible on the public leaderboard');
+  });
+
+  accountSignBtn.addEventListener('click', ()=>{
+    if(currentUser) signOutUser(); else signIn();
+  });
+  document.getElementById('accountBackBtn').addEventListener('click', ()=>{
+    accountScreen.classList.add('hidden');
+    refreshMenu();
+    mainMenu.classList.remove('hidden');
   });
 
   /* ---------- boot ---------- */
