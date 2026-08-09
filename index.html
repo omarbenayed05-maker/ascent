@@ -37,7 +37,7 @@
   .leaderboard-row{ display:flex; justify-content:space-between; align-items:center; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:8px; padding:9px 12px; font-family:var(--mono); font-size:12px; }
   .leaderboard-row .rank{ color:var(--amber); width:26px; }
   .leaderboard-row .name{ flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .leaderboard-row .val{ color:var(--glow); }
+  .leaderboard-row .val{ color:var(--glow); white-space:nowrap; font-size:11px; }
   #hearts{ display:flex; gap:6px; font-size:17px; }
   #score{ font-family:var(--mono); font-size:11px; color:var(--text-dim); text-align:right; letter-spacing:0.05em; }
   #score b{ font-size:19px; display:block; color:var(--amber); }
@@ -71,8 +71,19 @@
   #flameFx.flame-t3{ background: radial-gradient(ellipse at center, rgba(197,140,255,0.65), rgba(140,80,255,0.28) 55%, transparent 78%); }
   #flameFx.flame-t4{ background: radial-gradient(ellipse at center, rgba(255,184,77,0.7), rgba(255,120,30,0.3) 55%, transparent 78%); }
   #comboTag{ font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.05em; height:16px; margin-top:4px; opacity:0; transition:opacity 0.2s, color 0.3s; }
-  #wordTimerTrack{ margin:12px auto 0 auto; width:70%; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
+  #wordTimerTrack{ position:relative; margin:12px auto 0 auto; width:70%; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
   #wordTimerFill{ height:100%; width:100%; background:linear-gradient(90deg,var(--glow),var(--amber)); transform-origin:left; }
+  #ghostMarker{ position:absolute; top:-3px; bottom:-3px; width:2px; background:rgba(255,255,255,0.6); box-shadow:0 0 5px 1px rgba(255,255,255,0.5); opacity:0; transition:opacity 0.2s, left 0.15s linear; pointer-events:none; z-index:2; }
+
+  /* ---- screen-edge pulse — a soft vignette glow that shifts color with combo tier ---- */
+  #edgePulse{ position:fixed; inset:0; z-index:150; pointer-events:none; opacity:0;
+    box-shadow: inset 0 0 0 0 transparent; transition:opacity 0.35s, box-shadow 0.35s;
+    animation-name: edge-pulse; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-duration:0.85s; }
+  #edgePulse.show{ opacity:1; }
+  #edgePulse.flame-t2{ box-shadow: inset 0 0 100px 6px rgba(95,201,255,0.28); }
+  #edgePulse.flame-t3{ box-shadow: inset 0 0 100px 6px rgba(197,140,255,0.3); }
+  #edgePulse.flame-t4{ box-shadow: inset 0 0 120px 10px rgba(255,184,77,0.32); }
+  @keyframes edge-pulse{ 0%,100%{ opacity:0.55; } 50%{ opacity:1; } }
 
   /* flat 2D/SVG stage — no CSS 3D, so no depth-sorting ambiguity */
   #stage{ position:relative; flex:1; width:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; }
@@ -138,8 +149,14 @@
 
   #prompt{ padding:6px 0 18px 0; text-align:center; font-family:var(--mono); font-size:11px; color:var(--text-dim); letter-spacing:0.05em; }
 
-  #rewardToast{ position:fixed; top:14px; left:50%; transform:translateX(-50%); background:var(--panel-bg); border:1px solid var(--glow); color:var(--text); font-family:var(--mono); font-size:12px; padding:10px 16px; border-radius:8px; z-index:200; opacity:0; transition:opacity 0.4s; pointer-events:none; white-space:pre-line; text-align:center; max-width:80vw; }
-  #rewardToast.show{ opacity:1; }
+  #rewardToast{ position:fixed; top:14px; left:50%; transform:translateX(-50%) scale(1,1); background:var(--panel-bg); border:1px solid var(--glow); color:var(--text); font-family:var(--mono); font-size:12px; padding:10px 16px; border-radius:8px; z-index:200; opacity:0; transition:opacity 0.4s; pointer-events:none; white-space:pre-line; text-align:center; max-width:80vw; }
+  #rewardToast.show{ opacity:1; animation: toast-pop 0.5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes toast-pop{
+    0%{ transform:translateX(-50%) scale(0.65,1.35); }
+    45%{ transform:translateX(-50%) scale(1.18,0.85); }
+    72%{ transform:translateX(-50%) scale(0.94,1.06); }
+    100%{ transform:translateX(-50%) scale(1,1); }
+  }
 
   .overlay{ position:absolute; inset:0; background:var(--bg-deep); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; text-align:center; gap:12px; padding:20px; overflow-y:auto; }
   .overlay h1{ font-family:var(--display); font-weight:600; font-size:32px; letter-spacing:0.02em; }
@@ -220,15 +237,58 @@
   }
   @keyframes drift-wave{ from{ transform:translateX(0); } to{ transform:translateX(60px); } }
 
+  body.theme-dusk #skyLayer{ opacity:1; }
+  body.theme-dusk #app{ background: linear-gradient(180deg, #3d1f3a 0%, #7a3450 38%, #c15c4f 70%, #f2a45c 100%); }
+  .spark{ position:absolute; border-radius:50%; background:#ffdca0; box-shadow:0 0 6px 1px rgba(255,180,90,0.6);
+    animation-name: twinkle; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+
   body.theme-aurora #skyLayer{ opacity:1; }
   body.theme-aurora #app{ background: radial-gradient(ellipse at 50% -10%, #2b1f4d 0%, #14102a 45%, #0a0d16 85%); }
   .star{ animation-name: twinkle; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
   @keyframes twinkle{ 0%,100%{ opacity:0.15; } 50%{ opacity:1; } }
   .ribbon{ position:absolute; left:-10%; width:120%; height:70px; border-radius:50%; filter:blur(10px); opacity:0.25; animation-name:drift-ribbon; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
   @keyframes drift-ribbon{ 0%,100%{ transform:translateX(0) scaleY(1); } 50%{ transform:translateX(4%) scaleY(1.3); } }
+
+  /* ---- vignette + ambient embers behind the void backdrop, so idle screens aren't flat ---- */
+  #vignette{ position:absolute; inset:0; pointer-events:none; z-index:1;
+    background: radial-gradient(ellipse at 50% 30%, transparent 45%, rgba(0,0,0,0.55) 100%); }
+  .ember{ position:absolute; bottom:-10px; border-radius:50%; background:var(--glow); opacity:0;
+    box-shadow:0 0 6px 1px var(--glow-dim);
+    animation-name: ember-rise; animation-timing-function:ease-in; animation-iteration-count:infinite; }
+  @keyframes ember-rise{
+    0%{ transform:translateY(0) translateX(0); opacity:0; }
+    10%{ opacity:0.7; }
+    90%{ opacity:0.35; }
+    100%{ transform:translateY(-92vh) translateX(var(--drift,20px)); opacity:0; }
+  }
+
+  /* ---- trailing glow left behind the climber on each step, reads as motion energy ---- */
+  .step-trail{ position:absolute; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, var(--glow), transparent 70%);
+    animation:trail-fade 0.5s ease-out forwards; }
+  @keyframes trail-fade{ 0%{ opacity:0.55; transform:scale(1); } 100%{ opacity:0; transform:scale(0.3); } }
+
+  /* ---- desktop-only gate: this is a keyboard-typing game, so touch devices get steered to a PC ---- */
+  #mobileGate{ position:fixed; inset:0; background:radial-gradient(ellipse at 50% 15%, var(--bg-mid), var(--bg-deep) 75%);
+    z-index:500; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; gap:16px; }
+  #mobileGate.show{ display:flex; }
+  #mobileGate .gateIcon{ font-size:44px; }
+  #mobileGate h1{ font-family:var(--display); font-weight:600; font-size:26px; }
+  #mobileGate h1 span{ color:var(--glow); }
+  #mobileGate p{ color:var(--text-dim); font-size:13px; max-width:360px; line-height:1.7; font-family:var(--sans); }
+  #mobileGate .kbdHint{ font-family:var(--mono); font-size:11px; color:var(--text-dim); border:1px solid var(--panel-border); border-radius:8px; padding:10px 14px; background:var(--panel-bg); max-width:340px; line-height:1.6; }
 </style>
 </head>
 <body>
+<div id="edgePulse"></div>
+<div id="mobileGate">
+  <div class="gateIcon">⌨️</div>
+  <h1>ASC<span>ENT</span> is best on a keyboard</h1>
+  <p>This is a typing-speed game, and Free Mode is competitive — a touchscreen keyboard just can't type as fast as a real one, so it wouldn't be a fair race for the leaderboard. Please open this page on a desktop or laptop instead.</p>
+  <div class="kbdHint">Tip: if this device actually has a physical keyboard attached (e.g. a tablet in a keyboard case), you can continue anyway below.</div>
+  <button class="cta secondary small" id="mobileGateContinue" style="margin-top:4px;">CONTINUE ANYWAY</button>
+</div>
+
 <div id="app">
 
   <div id="hud">
@@ -252,11 +312,13 @@
     <div id="flameFx"></div>
     <div id="wordBanner"></div>
     <div id="comboTag"></div>
-    <div id="wordTimerTrack"><div id="wordTimerFill"></div></div>
+    <div id="wordTimerTrack"><div id="wordTimerFill"></div><div id="ghostMarker"></div></div>
   </div>
 
   <div id="stage">
     <div id="skyLayer"></div>
+    <div id="emberLayer" style="position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0;"></div>
+    <div id="vignette"></div>
     <div id="stairScene">
       <svg id="stairSvg" viewBox="0 0 560 460" preserveAspectRatio="xMidYMax meet"></svg>
       <div id="climber">
@@ -302,7 +364,7 @@
     <div class="shop-tabs">
       <div class="shop-tab active" id="tabCharacter">Character</div>
       <div class="shop-tab" id="tabStairs">Stairs</div>
-      <div class="shop-tab" id="tabBackdrop">Backdrop</div>
+      <div class="shop-tab" id="tabBackdrop">Theme</div>
     </div>
     <div class="shop-grid" id="shopGrid"></div>
     <button class="cta secondary" id="shopBackBtn">BACK</button>
@@ -335,6 +397,16 @@
         <small id="toggleSub">Off by default. Turn on to submit your best Free Mode run under your nickname.</small>
       </div>
     </div>
+    <div class="toggle-row">
+      <label class="toggle-switch">
+        <input type="checkbox" id="ghostToggle" />
+        <span class="toggle-slider"></span>
+      </label>
+      <div class="toggle-label">
+        <b>Show pace ghost in Free Mode</b>
+        <small>A marker on the timer bar showing where your best run was at this point. Turn off any time.</small>
+      </div>
+    </div>
     <p id="accountStatusMsg" style="font-size:11px;"></p>
     <div class="menu-row">
       <button class="cta" id="accountSignBtn">SIGN IN WITH GOOGLE</button>
@@ -344,7 +416,7 @@
 
   <div id="leaderboardScreen" class="overlay hidden">
     <h1>LEADER<span>BOARD</span></h1>
-    <p id="leaderboardMsg">Fastest Free Mode runs, ranked by steps per second.</p>
+    <p id="leaderboardMsg">Best Free Mode runs, ranked by steps climbed — ties broken by steps per second.</p>
     <div class="leaderboard-list" id="leaderboardList"></div>
     <button class="cta secondary" id="leaderboardBackBtn">BACK</button>
   </div>
@@ -446,6 +518,51 @@
     });
   }
 
+  /* ---------- desktop-only gate ---------- */
+  // Heuristic: touch-primary pointer + no fine (mouse) pointer + phone/tablet UA + narrow-ish
+  // viewport = almost certainly no physical keyboard attached. A Chromebook/tablet-with-keyboard
+  // still has a fine pointer or a wide viewport, so it slips through — and there's a manual
+  // "continue anyway" escape hatch for anyone the heuristic gets wrong.
+  function looksLikeTouchOnlyDevice(){
+    const coarseOnly = window.matchMedia && window.matchMedia('(pointer: coarse)').matches && !(window.matchMedia('(any-pointer: fine)').matches);
+    const uaFlag = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const narrow = Math.min(window.innerWidth, window.innerHeight) < 620;
+    return (coarseOnly || uaFlag) && narrow;
+  }
+  function initMobileGate(){
+    const gate = document.getElementById('mobileGate');
+    if(!gate) return;
+    if(looksLikeTouchOnlyDevice() && !sessionStorage.getItem('ascent_gate_dismissed')){
+      gate.classList.add('show');
+    }
+    document.getElementById('mobileGateContinue').addEventListener('click', ()=>{
+      try{ sessionStorage.setItem('ascent_gate_dismissed','1'); }catch(e){}
+      gate.classList.remove('show');
+    });
+  }
+
+  /* ---------- ambient embers (default Void backdrop only) ---------- */
+  let emberTimer = null;
+  function startEmbers(){
+    stopEmbers();
+    const layer = document.getElementById('emberLayer');
+    if(!layer) return;
+    emberTimer = setInterval(()=>{
+      if(save.equippedBackdrop !== 'void') return;
+      const ember = document.createElement('div');
+      ember.className = 'ember';
+      const size = 2 + Math.random()*3;
+      ember.style.width = size+'px';
+      ember.style.height = size+'px';
+      ember.style.left = (Math.random()*100)+'%';
+      ember.style.setProperty('--drift', (Math.random()*60-30)+'px');
+      ember.style.animationDuration = (5 + Math.random()*5)+'s';
+      layer.appendChild(ember);
+      setTimeout(()=>ember.remove(), 11000);
+    }, 700);
+  }
+  function stopEmbers(){ clearInterval(emberTimer); emberTimer = null; }
+
   /* ---------- persistence ---------- */
   const SAVE_KEY = 'ascent_save_v1';
   const FREE_MODE_MIN_LEVEL = 3; // spec asked for 10 — lowered for demo/testing; change this one constant for production
@@ -460,8 +577,11 @@
       ownedStairSkins:['default'], equippedStairSkin:'default',
       ownedBackdrops:['void'], equippedBackdrop:'void',
       claimedLevelRewards:{},
+      claimedFreeRewards:{},
       nickname:null,
-      leaderboardOptOut:true
+      leaderboardOptOut:true,
+      showGhost:true,
+      bestFreeStepDurations:[]
     };
   }
   let save = defaultSave();
@@ -470,7 +590,10 @@
       const raw = localStorage.getItem(SAVE_KEY);
       if(raw) save = Object.assign(defaultSave(), JSON.parse(raw));
       if(!save.claimedLevelRewards) save.claimedLevelRewards = {};
+      if(!save.claimedFreeRewards) save.claimedFreeRewards = {};
       if(!save.completedLevels) save.completedLevels = {};
+      if(!save.bestFreeStepDurations) save.bestFreeStepDurations = [];
+      if(typeof save.showGhost !== 'boolean') save.showGhost = true;
     }catch(e){ save = defaultSave(); }
   }
   function persistSave(){
@@ -564,14 +687,20 @@
     }, 800);
   }
 
+  // A run "beats" the stored best if it climbed more steps, or — on a tie — was faster (steps/sec).
+  function beatsExisting(newScore, newSps, oldScore, oldSps){
+    if(newScore !== oldScore) return newScore > oldScore;
+    return newSps > oldSps;
+  }
   async function submitLeaderboardScore(stepsPerSecond, score){
     if(!currentUser || !fbDb) return;
     if(save.leaderboardOptOut) return;
     try{
       const ref = fbDb.collection('leaderboard').doc(currentUser.uid);
       const existing = await ref.get();
-      const best = existing.exists ? (existing.data().stepsPerSecond || 0) : 0;
-      if(stepsPerSecond > best){
+      const oldScore = existing.exists ? (existing.data().score || 0) : 0;
+      const oldSps = existing.exists ? (existing.data().stepsPerSecond || 0) : 0;
+      if(!existing.exists || beatsExisting(score, stepsPerSecond, oldScore, oldSps)){
         await ref.set({ name: (save.nickname || currentUser.displayName || 'Anonymous'), stepsPerSecond, score, updatedAt: Date.now() });
       }
     }catch(e){ console.warn('Leaderboard submit failed', e); }
@@ -592,18 +721,23 @@
     }
     list.innerHTML = '<div style="font-family:var(--mono); font-size:11px; color:var(--text-dim);">Loading…</div>';
     try{
-      const snap = await fbDb.collection('leaderboard').orderBy('stepsPerSecond','desc').limit(10).get();
+      // Order by score server-side (needs no composite index), then break ties by
+      // steps/second client-side — a wider fetch guarantees ties near the cutoff sort correctly.
+      const snap = await fbDb.collection('leaderboard').orderBy('score','desc').limit(50).get();
+      const rows = [];
+      snap.forEach(doc=>rows.push(doc.data()));
+      rows.sort((a,b)=>{
+        if((b.score||0) !== (a.score||0)) return (b.score||0) - (a.score||0);
+        return (b.stepsPerSecond||0) - (a.stepsPerSecond||0);
+      });
       list.innerHTML = '';
-      let rank = 1;
-      snap.forEach(doc=>{
-        const d = doc.data();
+      rows.slice(0,10).forEach((d, i)=>{
         const row = document.createElement('div');
         row.className = 'leaderboard-row';
-        row.innerHTML = `<span class="rank">#${rank}</span><span class="name">${d.name||'Anonymous'}</span><span class="val">${(d.stepsPerSecond||0).toFixed(2)}/s</span>`;
+        row.innerHTML = `<span class="rank">#${i+1}</span><span class="name">${d.name||'Anonymous'}</span><span class="val">${d.score||0} steps <span style="color:var(--text-dim);">· ${(d.stepsPerSecond||0).toFixed(2)}/s</span></span>`;
         list.appendChild(row);
-        rank++;
       });
-      if(rank===1) msg.textContent = 'No runs yet — be the first on the board.';
+      if(rows.length===0) msg.textContent = 'No runs yet — be the first on the board.';
     }catch(e){
       list.innerHTML = '';
       msg.textContent = 'Could not load leaderboard: ' + e.message;
@@ -627,6 +761,9 @@
     let t = document.getElementById('rewardToast');
     if(!t){ t = document.createElement('div'); t.id = 'rewardToast'; document.body.appendChild(t); }
     t.textContent = msg;
+    // retrigger the squash-and-stretch pop even if a toast is already showing
+    t.classList.remove('show');
+    void t.offsetWidth;
     t.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(()=>t.classList.remove('show'), 4200);
@@ -652,6 +789,14 @@
     15:{coins:60, skins:[{type:'char', id:'shadow'}]},
     16:{coins:100, skins:[{type:'char', id:'nova'},{type:'stair', id:'neon'},{type:'backdrop', id:'aurora'}]}
   };
+  // Free Mode is the competitive/leaderboard mode, so it gets its own reward track keyed off
+  // best steps-climbed rather than level clears — climbing higher unlocks its own cosmetics.
+  const FREE_MODE_REWARDS = [
+    { score:20,  coins:30, skins:[{type:'char', id:'crimson'}] },
+    { score:45,  coins:50, skins:[{type:'stair', id:'obsidian'}] },
+    { score:75,  coins:70, skins:[{type:'backdrop', id:'dusk'}] },
+    { score:120, coins:120, skins:[{type:'char', id:'starlit'}] }
+  ];
   function grantSkin(type, id){
     if(type==='char' && !save.ownedCharSkins.includes(id)) save.ownedCharSkins.push(id);
     if(type==='stair' && !save.ownedStairSkins.includes(id)) save.ownedStairSkins.push(id);
@@ -667,7 +812,7 @@
       }
     });
   }
-  function checkLevelRewards(){
+  function checkLevelRewards(silent){
     if(!save.claimedLevelRewards) save.claimedLevelRewards = {};
     if(!save.completedLevels) save.completedLevels = {};
     const msgs = [];
@@ -684,7 +829,26 @@
     });
     if(msgs.length){
       persistSave();
-      showToast(msgs.join('\n'));
+      if(!silent) showToast(msgs.join('\n'));
+      refreshHud();
+    }
+    return msgs;
+  }
+  function checkFreeModeRewards(silent){
+    if(!save.claimedFreeRewards) save.claimedFreeRewards = {};
+    const msgs = [];
+    FREE_MODE_REWARDS.forEach(r=>{
+      if(save.bestScoreFree >= r.score && !save.claimedFreeRewards[r.score]){
+        let msg = `🎁 ${r.score}-step milestone:`;
+        if(r.coins){ save.coins += r.coins; msg += ` +${r.coins} coins`; }
+        (r.skins||[]).forEach(sk=>{ grantSkin(sk.type, sk.id); msg += ` · new ${sk.type} skin`; });
+        save.claimedFreeRewards[r.score] = true;
+        msgs.push(msg);
+      }
+    });
+    if(msgs.length){
+      persistSave();
+      if(!silent) showToast(msgs.join('\n'));
       refreshHud();
     }
     return msgs;
@@ -698,21 +862,27 @@
     { id:'cool', name:'Glacier', cost:60, head:'radial-gradient(circle at 40% 30%,#fff,#7fd8ff 60%,#2b8fbf)', torso:'linear-gradient(180deg,#bfeeff,#7fd8ff)', leg:'#3aa0cf' },
     { id:'ember', name:'Ember', cost:60, head:'radial-gradient(circle at 40% 30%,#fff,#ff7a5c 60%,#c93f24)', torso:'linear-gradient(180deg,#ffb39e,#ff7a5c)', leg:'#d4552f' },
     { id:'coral', name:'Coral', cost:90, head:'radial-gradient(circle at 40% 30%,#fff,#ff9d8f 60%,#d9503c)', torso:'linear-gradient(180deg,#ffcfc4,#ff9d8f)', leg:'#e06a4f' },
+    { id:'mint', name:'Mint', cost:90, head:'radial-gradient(circle at 40% 30%,#fff,#8fffc4 60%,#2fb87a)', torso:'linear-gradient(180deg,#c8ffe0,#8fffc4)', leg:'#3fcf8f' },
     { id:'violet', name:'Violet', unlock:{type:'level', id:10}, head:'radial-gradient(circle at 40% 30%,#fff,#c58cff 60%,#7b3fc9)', torso:'linear-gradient(180deg,#e6cfff,#c58cff)', leg:'#8b4fd6' },
+    { id:'crimson', name:'Crimson', unlock:{type:'freeScore', value:20}, head:'radial-gradient(circle at 40% 30%,#fff,#ff5c7a 60%,#a3163d)', torso:'linear-gradient(180deg,#ff9fb2,#ff5c7a)', leg:'#c22b52' },
     { id:'shadow', name:'Shadow', unlock:{type:'level', id:15}, head:'radial-gradient(circle at 40% 30%,#8f8fb0,#2c2c40 60%,#111119)', torso:'linear-gradient(180deg,#4a4a63,#22222f)', leg:'#1a1a24' },
+    { id:'starlit', name:'Starlit', unlock:{type:'freeScore', value:120}, head:'radial-gradient(circle at 35% 30%,#fff,#dfe8ff 45%,#8fa0ff 75%,#4a5fd6)', torso:'linear-gradient(180deg,#eef1ff,#a8b6ff)', leg:'#5f6fdb' },
     { id:'nova', name:'Nova', unlock:{type:'level', id:16}, head:'radial-gradient(circle at 40% 30%,#fff,#ffe27a 55%,#ffb100)', torso:'linear-gradient(180deg,#fff3c4,#ffd15c)', leg:'#e0a422' }
   ];
   const STAIR_SKINS = [
     { id:'default', name:'Nightfall', cost:0, tread:'#2a3350', treadEdge:'#3a4568', riser:'#141a2c', glow:'#3effb2' },
     { id:'sunset', name:'Sunset', cost:60, tread:'#4a2f3d', treadEdge:'#6b3f52', riser:'#2a1620', glow:'#ff9a5c' },
     { id:'frost', name:'Frost', cost:60, tread:'#28394a', treadEdge:'#3c5266', riser:'#101c26', glow:'#8fe8ff' },
+    { id:'copper', name:'Copper', cost:80, tread:'#3f2c22', treadEdge:'#5c4130', riser:'#1e130e', glow:'#ffb066' },
     { id:'jungle', name:'Jungle', unlock:{type:'level', id:12}, tread:'#233d2e', treadEdge:'#345643', riser:'#12211a', glow:'#c8ff5c' },
     { id:'volcanic', name:'Volcanic', unlock:{type:'level', id:14}, tread:'#3d2320', treadEdge:'#5c322c', riser:'#1c0f0d', glow:'#ff6a3d' },
+    { id:'obsidian', name:'Obsidian', unlock:{type:'freeScore', value:45}, tread:'#191c26', treadEdge:'#262b3a', riser:'#0a0b10', glow:'#c9a8ff' },
     { id:'neon', name:'Neon', unlock:{type:'level', id:16}, tread:'#231a3d', treadEdge:'#382a5c', riser:'#120c1f', glow:'#ff4de0' }
   ];
   const BACKDROPS = [
     { id:'void', name:'Void', cost:0 },
     { id:'sky', name:'Open Sky', unlock:{type:'level', id:9}, sound:true },
+    { id:'dusk', name:'Dusk Horizon', unlock:{type:'freeScore', value:75} },
     { id:'aurora', name:'Aurora Night', unlock:{type:'level', id:16} }
   ];
 
@@ -722,9 +892,10 @@
   };
 
   function applyBackdrop(id){
-    document.body.classList.remove('theme-sky','theme-aurora');
+    document.body.classList.remove('theme-sky','theme-aurora','theme-dusk');
     if(id === 'sky') document.body.classList.add('theme-sky');
     if(id === 'aurora') document.body.classList.add('theme-aurora');
+    if(id === 'dusk') document.body.classList.add('theme-dusk');
     buildSkyLayer(id);
     if(PACK_STAIR_OVERRIDE[id]){
       const p = PACK_STAIR_OVERRIDE[id];
@@ -787,6 +958,26 @@
         ribbon.style.animationDuration = (6 + i*2) + 's';
         layer.appendChild(ribbon);
       }
+    } else if(id === 'dusk'){
+      for(let i=0;i<28;i++){
+        const spark = document.createElement('div');
+        spark.className = 'spark';
+        const size = 1.5 + Math.random()*2;
+        spark.style.width = size+'px'; spark.style.height = size+'px';
+        spark.style.top = (Math.random()*80)+'%';
+        spark.style.left = (Math.random()*100)+'%';
+        spark.style.animationDuration = (2 + Math.random()*3)+'s';
+        spark.style.animationDelay = (-Math.random()*4)+'s';
+        layer.appendChild(spark);
+      }
+      // one soft sun-glow low on the horizon
+      const sun = document.createElement('div');
+      sun.style.position='absolute'; sun.style.left='50%'; sun.style.bottom='8%';
+      sun.style.width='140px'; sun.style.height='140px'; sun.style.marginLeft='-70px';
+      sun.style.borderRadius='50%';
+      sun.style.background='radial-gradient(circle, rgba(255,220,160,0.55), transparent 70%)';
+      sun.style.filter='blur(4px)';
+      layer.appendChild(sun);
     }
   }
 
@@ -850,7 +1041,9 @@
     AZ.forEach((c,i)=>{ if(i%2===0) odds.push(c); else evens.push(c); });
     return odds.concat(evens);
   }
-  const WORLD_NAMES = { 1:'World 1 — Foothills', 2:'World 2 — Ridge Run', 3:'World 3 — Storm Line', 4:'World 4 — Summit' };
+  // World names kept plain and literal — a difficulty ladder anyone recognizes at a glance,
+  // no invented lore to decode.
+  const WORLD_NAMES = { 1:'World 1 — Beginner', 2:'World 2 — Intermediate', 3:'World 3 — Advanced', 4:'World 4 — Expert' };
 
   const LEVELS = [
     { id:1, world:1, name:"Alphabet", desc:"the alphabet, in order", type:'sequence', sequence:AZ, time:6000 },
@@ -905,6 +1098,7 @@
   const VISIBLE_STEPS = 7;
   const TREAD_W = 190, RISER_H = 50, DEPTH_DX = 78, DEPTH_DY = 16;
   const ORIGIN_X = 185, ORIGIN_Y = 430;
+  const PARALLAX_BEHIND_FACTOR = 0.5; // steps already climbed drift at half the active step's speed
 
   function stepAnchor(i){
     return { x: ORIGIN_X + i*DEPTH_DX, y: ORIGIN_Y - i*(RISER_H+DEPTH_DY) };
@@ -918,7 +1112,10 @@
 
   function drawStairs(){
     stairSvg.innerHTML = "";
-    const group = svgEl('g', { id:'stepsGroup' });
+    // split into two groups so already-climbed ("behind") steps can drift at a different
+    // rate than the active+upcoming steps during the climb transition — a cheap parallax cue.
+    const groupActive = svgEl('g', { id:'stepsGroupActive' });
+    const groupBehind = svgEl('g', { id:'stepsGroupBehind' });
     const BEHIND_STEPS = 3;
     for(let i=VISIBLE_STEPS-1;i>=-BEHIND_STEPS;i--){
       const stepNum = state.currentStepIndex + i;
@@ -949,10 +1146,13 @@
         tread.setAttribute('stroke-width','2');
       }
 
-      group.appendChild(riser);
-      group.appendChild(tread);
+      const targetGroup = i < 0 ? groupBehind : groupActive;
+      targetGroup.appendChild(riser);
+      targetGroup.appendChild(tread);
     }
-    stairSvg.appendChild(group);
+    // painted back-to-front: far/behind group first, active+upcoming group on top
+    stairSvg.appendChild(groupBehind);
+    stairSvg.appendChild(groupActive);
     positionClimber();
   }
 
@@ -1067,10 +1267,30 @@
     wordTimerFill.style.transform = 'scaleX(0)';
   }
 
+  /* ---------- pace ghost — an optional marker showing where your best Free Mode run ---------- */
+  /* stood on this same step, so you can see whether you're ahead of or behind your own pace. */
+  const ghostMarkerEl = document.getElementById('ghostMarker');
+  function updateGhostMarker(){
+    if(!ghostMarkerEl) return;
+    if(state && state.mode.type === 'free' && save.showGhost){
+      const ghostDur = save.bestFreeStepDurations && save.bestFreeStepDurations[state.currentStepIndex];
+      const dur = timeForStep(state.mode, state.currentStepIndex);
+      if(ghostDur){
+        const frac = Math.min(1, Math.max(0, ghostDur / dur));
+        ghostMarkerEl.style.left = (frac*100) + '%';
+        ghostMarkerEl.style.opacity = '1';
+        return;
+      }
+    }
+    ghostMarkerEl.style.opacity = '0';
+  }
+
   function startTimerForStep(){
     clearTimeout(state.timerHandle);
     const dur = timeForStep(state.mode, state.currentStepIndex);
     resetTimerBar(dur);
+    state.currentWordStartTime = Date.now();
+    updateGhostMarker();
     state.timerHandle = setTimeout(onFail, dur);
   }
 
@@ -1091,6 +1311,16 @@
     aura.style.width='16px'; aura.style.height='16px'; aura.style.marginLeft='-8px'; aura.style.marginTop='-8px';
     wordZoneEl.appendChild(aura);
     setTimeout(()=>aura.remove(), 600);
+  }
+
+  function spawnStepTrail(){
+    const { cx, cy } = getActiveTreadCenter();
+    const trail = document.createElement('div');
+    trail.className = 'step-trail';
+    trail.style.width = '34px'; trail.style.height='34px';
+    trail.style.left = (cx-17) + 'px'; trail.style.top = (cy-17) + 'px';
+    stairScene.appendChild(trail);
+    setTimeout(()=>trail.remove(), 550);
   }
 
   function playStepAnim(){
@@ -1126,14 +1356,17 @@
     }
   }
   const flameFxEl = document.getElementById('flameFx');
+  const edgePulseEl = document.getElementById('edgePulse');
   function updateFlameState(){
     const tier = state ? getTier(state.combo) : null;
     const onFire = !!(state && state.mode.type === 'free' && tier);
     flameFxEl.classList.remove('flame-t2','flame-t3','flame-t4');
     wordBanner.classList.remove('flame-t2','flame-t3','flame-t4');
+    if(edgePulseEl) edgePulseEl.classList.remove('flame-t2','flame-t3','flame-t4','show');
     if(onFire){
       flameFxEl.classList.add(tier.cls, 'show');
       wordBanner.classList.add(tier.cls);
+      if(edgePulseEl) edgePulseEl.classList.add(tier.cls, 'show');
     } else {
       flameFxEl.classList.remove('show');
     }
@@ -1143,8 +1376,14 @@
     clearTimeout(state.timerHandle);
     spawnAura();
     spawnWordAura();
+    spawnStepTrail();
     playStepAnim();
     playCompleteChime();
+
+    // record how long this word took, for the pace-ghost feature on future Free Mode runs
+    if(state.mode.type === 'free' && state.currentWordStartTime){
+      state.stepDurations[state.currentStepIndex] = Date.now() - state.currentWordStartTime;
+    }
 
     state.combo = (state.combo||0) + 1;
     state.multiplier = comboMultiplier(state.combo);
@@ -1156,10 +1395,17 @@
     state.typed = "";
     state.locked = true;
 
-    const group = document.getElementById('stepsGroup');
-    if(group){
-      group.style.transition = 'transform 0.32s ease-in';
-      group.style.transform = `translate(${-DEPTH_DX}px, ${RISER_H+DEPTH_DY}px)`;
+    // parallax: active+upcoming steps move the full step distance, already-climbed ("behind")
+    // steps move at a fraction of that — a cheap depth cue during the climb transition.
+    const groupActive = document.getElementById('stepsGroupActive');
+    const groupBehind = document.getElementById('stepsGroupBehind');
+    if(groupActive){
+      groupActive.style.transition = 'transform 0.32s ease-in';
+      groupActive.style.transform = `translate(${-DEPTH_DX}px, ${RISER_H+DEPTH_DY}px)`;
+    }
+    if(groupBehind){
+      groupBehind.style.transition = 'transform 0.32s ease-in';
+      groupBehind.style.transform = `translate(${-DEPTH_DX*PARALLAX_BEHIND_FACTOR}px, ${(RISER_H+DEPTH_DY)*PARALLAX_BEHIND_FACTOR}px)`;
     }
 
     setTimeout(()=>{
@@ -1193,6 +1439,7 @@
     syncWind();
     climberEl.classList.remove('idle','stepping');
     climberEl.classList.add(won ? 'landed' : 'falling');
+    if(ghostMarkerEl) ghostMarkerEl.style.opacity = '0';
     setTimeout(()=>finishEndGame(won), won ? 420 : 600);
   }
 
@@ -1202,7 +1449,11 @@
     if(state.mode.type === 'free'){
       xpGain = state.score;
       coinGain = Math.floor(state.score/2);
-      if(state.score > save.bestScoreFree){ save.bestScoreFree = state.score; }
+      const isNewBest = state.score > save.bestScoreFree;
+      if(isNewBest){
+        save.bestScoreFree = state.score;
+        save.bestFreeStepDurations = state.stepDurations.slice();
+      }
       endTitle.innerHTML = 'YOU <span>FELL</span>';
       endSub.textContent = 'steps climbed';
       const elapsedSec = Math.max(1, (Date.now() - (state.startTime||Date.now())) / 1000);
@@ -1234,7 +1485,8 @@
     grantXP(xpGain);
     grantCoins(coinGain);
     persistSave();
-    const rewardMsgs = checkLevelRewards();
+    const rewardMsgs = checkLevelRewards(true).concat(state.mode.type === 'free' ? checkFreeModeRewards(true) : []);
+    if(rewardMsgs.length) showToast(rewardMsgs.join('\n'));
     refreshHud();
 
     finalScoreEl.textContent = state.score;
@@ -1256,6 +1508,7 @@
     state = {
       running:true, score:0, lives:3, combo:0, multiplier:1,
       currentStepIndex:0, typed:"", timerHandle:null, startTime: Date.now(),
+      currentWordStartTime: null, stepDurations: [],
       mode: Object.assign({ words: [], bags:{} }, mode)
     };
     syncWind();
@@ -1430,7 +1683,9 @@
       else if(isOwned){ btnLabel='Equip'; btnClass=''; }
       else if(isLocked){ btnLabel='Locked'; btnClass='locked-reward'; }
       else { btnLabel='Buy'; btnClass='buy'; }
-      const unlockNote = isLocked ? `<div class="unlock-note">Clear Level ${item.unlock.id} to unlock</div>` : '';
+      const unlockNote = isLocked
+        ? `<div class="unlock-note">${item.unlock.type==='freeScore' ? `Reach ${item.unlock.value} steps in Free Mode to unlock` : `Clear Level ${item.unlock.id} to unlock`}</div>`
+        : '';
       card.innerHTML = `
         <div class="shop-swatch" style="background:${swatchColor}"></div>
         <div class="name">${item.name}${item.sound?' 🔊':''}${(!isOwned && !isLocked && item.cost>0)?' · 🪙'+item.cost:''}</div>
@@ -1510,6 +1765,7 @@
   const nicknameInput = document.getElementById('nicknameInput');
   const avatarCircle = document.getElementById('avatarCircle');
   const leaderboardOptToggle = document.getElementById('leaderboardOptToggle');
+  const ghostToggle = document.getElementById('ghostToggle');
   const accountSignBtn = document.getElementById('accountSignBtn');
   const accountStatusMsg = document.getElementById('accountStatusMsg');
   const profileSub = document.getElementById('profileSub');
@@ -1529,6 +1785,7 @@
 
     leaderboardOptToggle.checked = !save.leaderboardOptOut;
     leaderboardOptToggle.disabled = !currentUser;
+    ghostToggle.checked = !!save.showGhost;
 
     if(currentUser){
       profileSub.textContent = `Signed in as ${currentUser.email || currentUser.displayName || 'your Google account'} · cloud saved`;
@@ -1576,6 +1833,13 @@
     showToast(save.leaderboardOptOut ? '🙈 Hidden from the public leaderboard' : '🏆 Visible on the public leaderboard');
   });
 
+  ghostToggle.addEventListener('change', ()=>{
+    save.showGhost = ghostToggle.checked;
+    persistSave();
+    updateGhostMarker();
+    showToast(save.showGhost ? '👻 Pace ghost turned on' : '👻 Pace ghost turned off');
+  });
+
   accountSignBtn.addEventListener('click', ()=>{
     if(currentUser) signOutUser(); else signIn();
   });
@@ -1594,6 +1858,9 @@
   refreshAuthUI();
   backfillCompletedLevels(); // makes sure levels cleared before this reward system existed still count
   checkLevelRewards(); // grants any level-clear rewards not yet claimed, with a toast
+  checkFreeModeRewards(); // same, for Free Mode step milestones
+  initMobileGate();
+  startEmbers();
 })();
 </script>
 </body>
