@@ -72,6 +72,7 @@
   #flameFx.flame-t2{ background: radial-gradient(ellipse at center, rgba(95,201,255,0.65), rgba(60,150,255,0.28) 55%, transparent 78%); }
   #flameFx.flame-t3{ background: radial-gradient(ellipse at center, rgba(197,140,255,0.65), rgba(140,80,255,0.28) 55%, transparent 78%); }
   #flameFx.flame-t4{ background: radial-gradient(ellipse at center, rgba(255,184,77,0.7), rgba(255,120,30,0.3) 55%, transparent 78%); }
+  #wordTranslation{ font-family:var(--mono); font-size:14px; color:var(--text-dim); letter-spacing:0.02em; min-height:16px; margin-top:2px; opacity:0.85; }
   #comboTag{ font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.05em; height:16px; margin-top:4px; opacity:0; transition:opacity 0.2s, color 0.3s; }
   #wordTimerTrack{ position:relative; margin:12px auto 0 auto; width:70%; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
   #wordTimerFill{ height:100%; width:100%; background:linear-gradient(90deg,var(--glow),var(--amber)); transform-origin:left; }
@@ -373,6 +374,7 @@
   <div id="wordZone">
     <div id="flameFx"></div>
     <div id="wordBanner"></div>
+    <div id="wordTranslation"></div>
     <div id="comboTag"></div>
     <div id="wordTimerTrack"><div id="wordTimerFill"></div><div id="ghostMarker"></div></div>
   </div>
@@ -486,6 +488,26 @@
         <small>A marker on the timer bar showing where your best run was at this point. Turn off any time.</small>
       </div>
     </div>
+    <div class="toggle-row">
+      <div class="toggle-label">
+        <b>Typing language</b>
+        <small>Choose which language the words you type are in.</small>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="cta secondary small" id="langEnBtn" style="padding:6px 12px;">EN</button>
+        <button class="cta secondary small" id="langFrBtn" style="padding:6px 12px;">FR</button>
+      </div>
+    </div>
+    <div class="toggle-row">
+      <label class="toggle-switch">
+        <input type="checkbox" id="translationToggle" />
+        <span class="toggle-slider"></span>
+      </label>
+      <div class="toggle-label">
+        <b>Show translation hint</b>
+        <small>Shows the word's translation in parentheses underneath it — French hints in English mode, English hints in French mode.</small>
+      </div>
+    </div>
     <p id="accountStatusMsg" style="font-size:11px;"></p>
     <div class="menu-row">
       <button class="cta" id="accountSignBtn">SIGN IN WITH GOOGLE</button>
@@ -495,7 +517,11 @@
 
   <div id="leaderboardScreen" class="overlay hidden">
     <h1>LEADER<span>BOARD</span></h1>
-    <p id="leaderboardMsg">Best Free Mode runs, ranked by steps climbed — ties broken by steps per second. Matching names show a short tag so you can tell players apart.</p>
+    <p id="leaderboardMsg">Best Free Mode runs, ranked by steps climbed — ties broken by steps per second. Matching names show a short tag so you can tell players apart. English and French runs are ranked separately, since typing in each language isn't an equal race.</p>
+    <div class="shop-tabs">
+      <div class="shop-tab" id="lbTabEn">English</div>
+      <div class="shop-tab" id="lbTabFr">French</div>
+    </div>
     <div class="leaderboard-list" id="leaderboardList"></div>
     <button class="cta secondary" id="leaderboardBackBtn">BACK</button>
   </div>
@@ -733,7 +759,9 @@
       nickname:null,
       leaderboardOptOut:true,
       showGhost:true,
-      bestFreeStepDurations:[]
+      bestFreeStepDurations:[],
+      language:'en',
+      showTranslation:false
     };
   }
   let save = defaultSave();
@@ -749,6 +777,8 @@
       if(!save.bestFreeStepDurations) save.bestFreeStepDurations = [];
       if(typeof save.gems !== 'number') save.gems = 0;
       if(typeof save.showGhost !== 'boolean') save.showGhost = true;
+      if(typeof save.language !== 'string') save.language = 'en';
+      if(typeof save.showTranslation !== 'boolean') save.showTranslation = false;
     }catch(e){ save = defaultSave(); }
   }
   function persistSave(){
@@ -844,29 +874,43 @@
     if(newScore !== oldScore) return newScore > oldScore;
     return newSps > oldSps;
   }
+  // English and French are two different typing tasks, so each user gets a separate
+  // leaderboard entry per language (doc id "<uid>_<lang>") rather than one shared doc —
+  // otherwise submitting a run in one language would wipe out the best run in the other.
+  function leaderboardDocId(lang){ return currentUser.uid + '_' + lang; }
   async function submitLeaderboardScore(stepsPerSecond, score){
     if(!currentUser || !fbDb) return;
     if(save.leaderboardOptOut) return;
     try{
-      const ref = fbDb.collection('leaderboard').doc(currentUser.uid);
+      const ref = fbDb.collection('leaderboard').doc(leaderboardDocId(save.language));
       const existing = await ref.get();
       const oldScore = existing.exists ? (existing.data().score || 0) : 0;
       const oldSps = existing.exists ? (existing.data().stepsPerSecond || 0) : 0;
       if(!existing.exists || beatsExisting(score, stepsPerSecond, oldScore, oldSps)){
         // uid-derived tag lets the leaderboard tell apart two players who picked the same nickname
-        await ref.set({ name: (save.nickname || currentUser.displayName || 'Anonymous'), tag: currentUser.uid.slice(-4), stepsPerSecond, score, updatedAt: Date.now() });
+        await ref.set({ name: (save.nickname || currentUser.displayName || 'Anonymous'), tag: currentUser.uid.slice(-4), stepsPerSecond, score, language: save.language, updatedAt: Date.now() });
       }
     }catch(e){ console.warn('Leaderboard submit failed', e); }
   }
 
   function removeFromLeaderboard(){
     if(!currentUser || !fbDb) return;
-    fbDb.collection('leaderboard').doc(currentUser.uid).delete().catch(e=>console.warn('Leaderboard removal failed', e));
+    ['en','fr'].forEach(lang=>{
+      fbDb.collection('leaderboard').doc(leaderboardDocId(lang)).delete().catch(e=>console.warn('Leaderboard removal failed', e));
+    });
   }
 
-  async function loadLeaderboard(){
+  let leaderboardLangTab = 'en';
+  async function loadLeaderboard(lang){
+    if(lang) leaderboardLangTab = lang;
     const list = document.getElementById('leaderboardList');
     const msg = document.getElementById('leaderboardMsg');
+    const tabEn = document.getElementById('lbTabEn');
+    const tabFr = document.getElementById('lbTabFr');
+    if(tabEn && tabFr){
+      tabEn.classList.toggle('active', leaderboardLangTab === 'en');
+      tabFr.classList.toggle('active', leaderboardLangTab === 'fr');
+    }
     if(!fbReady()){
       list.innerHTML = '';
       msg.textContent = "Leaderboard needs Firebase set up first — sign in once it's configured.";
@@ -874,14 +918,16 @@
     }
     list.innerHTML = '<div style="font-family:var(--mono); font-size:11px; color:var(--text-dim);">Loading…</div>';
     try{
-      const snap = await fbDb.collection('leaderboard').orderBy('score','desc').limit(50).get();
+      const snap = await fbDb.collection('leaderboard').orderBy('score','desc').limit(200).get();
       const rows = [];
       snap.forEach(doc=>rows.push(doc.data()));
-      rows.sort((a,b)=>{
+      // docs saved before this update won't have a language field — treat those as English
+      const filtered = rows.filter(d => (d.language || 'en') === leaderboardLangTab);
+      filtered.sort((a,b)=>{
         if((b.score||0) !== (a.score||0)) return (b.score||0) - (a.score||0);
         return (b.stepsPerSecond||0) - (a.stepsPerSecond||0);
       });
-      const top = rows.slice(0,10);
+      const top = filtered.slice(0,10);
       // count how many times each display name appears in the visible list — only players
       // who share a name with someone else get the disambiguating #tag suffix
       const nameCounts = {};
@@ -1254,11 +1300,59 @@
   };
   POOLS.mixed = [].concat(POOLS.short, POOLS.medium, POOLS.long);
 
+  /* ---------- French translations + typable French pools ----------
+     Translations are display-only hints (shown under the word in parentheses),
+     except when Language is set to French, in which case the accent-stripped
+     "typable" French word becomes the word the player actually types. */
+  const POOLS_FR_DISPLAY = {
+    short: ["chat","chien","courir","soleil","clé","haut","rouge","grand","oui","neuf","un","deux","loin","chaud","ciel","abeille","tasse","carte","sac","voiture","renard","chapeau","glace","confiture","trousse","bûche","boue","filet","hibou","stylo","tapis","mer","robinet","urne","camion","cire","zoo","air","art","chauve-souris","lit","boîte","bus","boîte","vache","jour","oreille","œuf","ventilateur","mouche","gaz","gym","poule","encre","pot","labo","couvercle","mélange","sieste","chêne","coussin","fosse","cru","gorgée","cuve","usage","véto","perruque","yack","fermeture","as","âge","bras","bar","baie","bit","bourgeon","taxi","casquette","berceau","petit","coupe","barrage","tanière","trempette","point","sec","teinture","elfe","fin","ère","veille","figue","nageoire","en forme","brouillard","amusant","écart","intestin","hanche","moyeu","cabane","mâchoire","jet","travail","jogging","cruche","fût","tour","loi","allumé","lot","tapis","foule","serpillière","signe","noix","huile","orbe","copain","pois","cheville","animal","cochon","cosse","pop","pot","pub","carlin","bélier","rat","côte","jante","déchirure","voler","pourriture","rangée","frotter","rhum","triste","sève","assis","scie","ensemble","asseoir","ski","sanglot","gazon","semer","spa","espion","étiquette","bronzage","thé","dix","cravate","étain","pourboire","orteil","tonne","jouet","essayer","remorqueur","vœu","remuer","guerre","toile","mouillé","gagner","esprit"],
+    medium: ["grimper","marche","lumière","rapide","étincelle","verre","tempête","fantôme","panneau","givre","noble","corbeau","flamme","cabane","corail","danse","aigle","festin","cadre","géant","miel","igloo","joyeux","chevalier","citron","mangue","océan","piano","reine","cavalier","sable","tigre","oncle","vif","baleine","xénon","céder","zèbre","ambre","floraison","charme","delta","braise","flamme","bosquet","havre","ivoire","farceur","couteau","lunaire","gaieté","coup de coude","orbite","perle","couette","crête","saint","dents","ultra","voûte","venteux","yacht","piquant","gland","courageux","croustillant","nain","champ","saisir","humide","boîte de réception","géant","karma","loge","nymphe","olive","place","quête","rassemblement","écharpe","tempo","unifier","vers","spirituel","jeunesse","vif","poursuite","dérive","éthique","fable","glisser","planer","crique","gelée","s'agenouiller","élevé","moussu","niche","opéra","pochette","rapide","sirène","toast","urbain","vigueur","quai","allée","rougir","grue","poussiéreux","essai","fondant","gnome","husky","juge","koala","loquet","médaille","pixel","marche","salsa","trace","exhorté","vapeur","valse"],
+    long: ["ascension","gravité","escalier","élan","couloir","seuil","lumineux","cascade","vélocité","fracture","horizon urbain","horizon","plateau","rocher","fissure","avalanche","altitude","effort","triomphe","ancre","tourbillon","tempête","vagabond","odyssée","sommet","zénith","parangon","citadelle","labyrinthe","cathédrale","obsidienne","fantôme","éclipse","tsunami","blizzard","sanctuaire","forteresse","alliance","crescendo","infini","gant","marathon","résonance","tourbillon","cyclone","ouverture","éclat","sérénité","ténacité","vigilant","catalyseur","domination","émissaire","frontière","gardien","harmonique","illusion","jonction","cinétique","monolithe","nocturne","paradis","dilemme","imprudent","symphonie","turbulent","courant sous-marin","front d'onde"]
+  };
+  function toTypable(s){
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
+  }
+  const POOLS_FR = { short:[], medium:[], long:[] };
+  const EN_TO_FR = {};
+  const FRTYPED_TO_EN = {};
+  ['short','medium','long'].forEach(tier=>{
+    POOLS[tier].forEach((enWord, i)=>{
+      const frDisplay = (POOLS_FR_DISPLAY[tier] && POOLS_FR_DISPLAY[tier][i]) ? POOLS_FR_DISPLAY[tier][i] : enWord;
+      const frTyped = toTypable(frDisplay) || enWord;
+      POOLS_FR[tier].push(frTyped);
+      EN_TO_FR[enWord] = frDisplay;
+      FRTYPED_TO_EN[frTyped] = enWord;
+    });
+  });
+  POOLS_FR.mixed = [].concat(POOLS_FR.short, POOLS_FR.medium, POOLS_FR.long);
+
+  // Phrase-level hints (levels 12 & 13 stay typed in English regardless of Language setting —
+  // the translation is shown only as a hint under the phrase).
+  const PHRASE_TRANSLATIONS = {
+    "type fast":"tape vite",
+    "climb high":"monte haut",
+    "keep going":"continue",
+    "reach the top":"atteins le sommet",
+    "one more step":"encore un pas",
+    "practice makes perfect":"c'est en forgeant qu'on devient forgeron",
+    "every step counts twice":"chaque pas compte double",
+    "the higher you climb":"plus tu montes haut",
+    "focus on your rhythm":"concentre-toi sur ton rythme",
+    "almost at the summit":"presque au sommet"
+  };
+  function getTranslationHint(word){
+    if(!word) return "";
+    if(PHRASE_TRANSLATIONS[word]) return PHRASE_TRANSLATIONS[word];
+    if(save.language === 'fr') return FRTYPED_TO_EN[word] || "";
+    return EN_TO_FR[word] || "";
+  }
+  function activePools(){ return save.language === 'fr' ? POOLS_FR : POOLS; }
+
   function makeBag(poolName){
     let bag = [];
     let last = null;
     function refill(){
-      bag = POOLS[poolName].slice();
+      bag = activePools()[poolName].slice();
       for(let i=bag.length-1;i>0;i--){
         const j = Math.floor(Math.random()*(i+1));
         [bag[i],bag[j]] = [bag[j],bag[i]];
@@ -1324,6 +1418,7 @@
   const bestTagEl = document.getElementById('bestTag');
   const modeTagEl = document.getElementById('modeTag');
   const wordBanner = document.getElementById('wordBanner');
+  const wordTranslationEl = document.getElementById('wordTranslation');
   const wordTimerFill = document.getElementById('wordTimerFill');
   const wordZoneEl = document.getElementById('wordZone');
   const comboTagEl = document.getElementById('comboTag');
@@ -1440,11 +1535,46 @@
     return mode.sequence[index] !== undefined ? mode.sequence[index] : null;
   }
 
+  // Average word/phrase length for a pool or a fixed sequence, used as the "typical" length
+  // a level's designed duration was tuned around.
+  function poolAverageLength(poolName){
+    const arr = activePools()[poolName];
+    if(!arr || !arr.length) return 5;
+    return arr.reduce((s,w)=>s+w.length,0) / arr.length;
+  }
+  function sequenceAverageLength(seq){
+    if(!seq || !seq.length) return 5;
+    return seq.reduce((s,w)=>s+w.length,0) / seq.length;
+  }
+  function referenceLength(mode){
+    if(mode.type === 'randomPool' || mode.type === 'free') return poolAverageLength(mode.pool || 'mixed');
+    if(mode.sequence) return sequenceAverageLength(mode.sequence);
+    return 5;
+  }
+  // Intelligent, length-aware timer: a level's configured "time" is the budget for a
+  // *typical*-length word in that level, then scaled up or down for the actual word/phrase
+  // in front of you — so a long phrase (or a longer French translation) gets proportionally
+  // more time instead of the same flat window as a 3-letter word. Difficulty still ramps up
+  // the further you climb, but a per-character safety floor (which only loosens slightly,
+  // never disappears) guarantees every word stays physically typeable.
   function timeForStep(mode, index){
-    if(mode.type === 'free') return Math.max(5200 - index*90, 1800);
-    let t = mode.time;
-    if(mode.timeDecay) t = Math.max(mode.time - index*mode.timeDecay, 1500);
-    return t;
+    const word = (mode.words && mode.words[index]) || '';
+    const len = Math.max(1, word.length);
+    let base;
+    if(mode.type === 'free'){
+      base = Math.max(2200, 5200 - index*90);
+    } else {
+      base = mode.time;
+      if(mode.timeDecay) base = Math.max(base - index*mode.timeDecay, Math.round(mode.time*0.45));
+    }
+    const refLen = mode.refLen || referenceLength(mode);
+    const lenFactor = len / Math.max(1, refLen);
+    let scaled = base * Math.max(0.55, lenFactor);
+    const perCharFloor = mode.type === 'free'
+      ? Math.max(85, 150 - index*0.6)
+      : Math.max(95, 155 - index*2.2);
+    scaled = Math.max(scaled, len*perCharFloor);
+    return Math.max(700, Math.round(scaled));
   }
 
   function ensureWords(mode, upTo){
@@ -1513,6 +1643,14 @@
       else html += ch;
     }
     wordBanner.innerHTML = html;
+    if(wordTranslationEl){
+      if(save.showTranslation){
+        const hint = getTranslationHint(target);
+        wordTranslationEl.textContent = hint ? `(${hint})` : "";
+      } else {
+        wordTranslationEl.textContent = "";
+      }
+    }
   }
 
   function resetTimerBar(dur){
@@ -1693,7 +1831,33 @@
   const REVIVE_BASE_COST = 20, REVIVE_COST_STEP = 15;
   function reviveCost(){ return REVIVE_BASE_COST + (state.revivesUsed||0)*REVIVE_COST_STEP; }
 
+  // Bright, clearly-audible "wrong" buzzer — sits in the mid range (not bass) so it cuts
+  // through and reads as a distinct notification, unlike the soft ascending success chime.
+  function playFailSound(){
+    const ctx = ensureAudio();
+    if(!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [ {f:392, d:0.13}, {f:262, d:0.20} ]; // two dissonant square-wave blips, descending
+    notes.forEach((n,i)=>{
+      const t = now + i*0.085;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(n.f, t);
+      osc.connect(gain); gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.45, t+0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t+n.d);
+      osc.start(t);
+      osc.stop(t+n.d+0.02);
+    });
+  }
+
   function onFail(){
+    playFailSound();
+    // brief invisible cooldown: if you're typing fast and don't notice a mistake right away,
+    // this stops the next rapid keystrokes from also registering as fresh failures.
+    state.inputLockedUntil = Date.now() + 500;
     clearTimeout(state.timerHandle);
     stairScene.classList.add('shake');
     setTimeout(()=>stairScene.classList.remove('shake'), 300);
@@ -1837,6 +2001,7 @@
       currentStepIndex:0, typed:"", timerHandle:null, startTime: Date.now(),
       currentWordStartTime: null, stepDurations: [],
       revivesUsed:0, freeRevives:0, claimedComboThisRun:{},
+      inputLockedUntil: 0,
       mode: Object.assign({ words: [], bags:{} }, mode)
     };
     syncWind();
@@ -1853,6 +2018,7 @@
   document.addEventListener('keydown', (e)=>{
     if(!state || !state.running || state.locked) return;
     if(!reviveScreen.classList.contains('hidden')) return;
+    if(state.inputLockedUntil && Date.now() < state.inputLockedUntil) return;
     const isChar = e.key.length === 1 && /[a-zA-Z ]/.test(e.key);
     if(!isChar) return;
     const target = state.mode.words[state.currentStepIndex];
@@ -1928,7 +2094,7 @@
     stopRunIfActive();
     mainMenu.classList.add('hidden');
     document.getElementById('leaderboardScreen').classList.remove('hidden');
-    loadLeaderboard();
+    loadLeaderboard(save.language);
   });
 
   document.getElementById('freeModeBtn').addEventListener('click', ()=>{
@@ -2082,8 +2248,10 @@
     stopRunIfActive();
     mainMenu.classList.add('hidden');
     document.getElementById('leaderboardScreen').classList.remove('hidden');
-    loadLeaderboard();
+    loadLeaderboard(save.language);
   });
+  document.getElementById('lbTabEn').addEventListener('click', ()=>loadLeaderboard('en'));
+  document.getElementById('lbTabFr').addEventListener('click', ()=>loadLeaderboard('fr'));
   document.getElementById('leaderboardBackBtn').addEventListener('click', ()=>{
     document.getElementById('leaderboardScreen').classList.add('hidden');
     refreshMenu();
@@ -2144,6 +2312,9 @@
   const avatarCircle = document.getElementById('avatarCircle');
   const leaderboardOptToggle = document.getElementById('leaderboardOptToggle');
   const ghostToggle = document.getElementById('ghostToggle');
+  const translationToggle = document.getElementById('translationToggle');
+  const langEnBtn = document.getElementById('langEnBtn');
+  const langFrBtn = document.getElementById('langFrBtn');
   const accountSignBtn = document.getElementById('accountSignBtn');
   const accountStatusMsg = document.getElementById('accountStatusMsg');
   const profileSub = document.getElementById('profileSub');
@@ -2151,6 +2322,32 @@
   function displayName(){
     return save.nickname || (currentUser ? (currentUser.displayName||'Player').split(' ')[0] : 'Guest');
   }
+
+  function refreshLangButtons(){
+    if(!langEnBtn || !langFrBtn) return;
+    const enActive = save.language !== 'fr';
+    langEnBtn.style.background = enActive ? 'var(--glow)' : 'transparent';
+    langEnBtn.style.color = enActive ? '#0a0d16' : 'var(--text)';
+    langFrBtn.style.background = !enActive ? 'var(--glow)' : 'transparent';
+    langFrBtn.style.color = !enActive ? '#0a0d16' : 'var(--text)';
+  }
+  if(langEnBtn) langEnBtn.addEventListener('click', ()=>{
+    save.language = 'en';
+    persistSave();
+    refreshLangButtons();
+    showToast('Typing language set to English');
+  });
+  if(langFrBtn) langFrBtn.addEventListener('click', ()=>{
+    save.language = 'fr';
+    persistSave();
+    refreshLangButtons();
+    showToast('Langue de frappe réglée sur le français');
+  });
+  if(translationToggle) translationToggle.addEventListener('change', ()=>{
+    save.showTranslation = translationToggle.checked;
+    persistSave();
+    showToast(save.showTranslation ? '🌍 Translation hints on' : '🌍 Translation hints off');
+  });
 
   function refreshAccountScreen(){
     const skin = CHAR_SKINS.find(s=>s.id===save.equippedCharSkin) || CHAR_SKINS[0];
@@ -2165,6 +2362,8 @@
     leaderboardOptToggle.checked = !save.leaderboardOptOut;
     leaderboardOptToggle.disabled = !currentUser;
     ghostToggle.checked = !!save.showGhost;
+    if(translationToggle) translationToggle.checked = !!save.showTranslation;
+    refreshLangButtons();
 
     if(currentUser){
       profileSub.textContent = `Signed in as ${currentUser.email || currentUser.displayName || 'your Google account'} · cloud saved`;
