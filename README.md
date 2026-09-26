@@ -39,6 +39,4 @@ npx serve .
 - [ ] More languages beyond EN/FR
 - [ ] Expanded cosmetic shop items
 
-## License
 
-*(Add a license if you want others to know how they can use/reuse this code — MIT is a common permissive choice for portfolio projects.)*
