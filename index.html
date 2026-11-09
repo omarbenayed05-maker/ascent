@@ -2,10 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ASCENT — Type to Climb</title>
+<meta name="description" content="A competitive typing game: type the word to climb the stairs. Chain combos, climb the leaderboard and challenge your friends.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ASCENT — Type to Climb">
+<meta property="og:description" content="Type the word, climb the stairs, don't fall. Can you beat my score?">
+<meta name="twitter:card" content="summary">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap');
   :root{
@@ -214,6 +221,7 @@
   .stats-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; }
   .stat-item b{ display:block; font-family:var(--mono); font-size:17px; color:var(--text); font-weight:700; }
   .stat-item span{ font-family:var(--sans); font-size:10.5px; color:var(--text-dim); letter-spacing:0.03em; }
+  .challenge-banner{ width:340px; max-width:100%; background:var(--panel-bg); border:1px solid var(--amber); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:10px; justify-content:space-between; text-align:left; font-family:var(--sans); font-size:12.5px; line-height:1.4; }
   .stats-since{ font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:12px; }
   .toggle-row{ display:flex; align-items:center; gap:12px; width:340px; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:12px; padding:13px 15px; text-align:left; }
   .toggle-label{ flex:1; }
@@ -415,6 +423,10 @@
     </div>
     <div class="gauge-wrap" id="menuGaugeWrap"></div>
     <p>Type the word above the stairs to climb higher. Miss a letter, or run out of time, and you fall. Chain words without missing to build a combo — big streaks earn bonus hearts, free revives, and rare skins.</p>
+    <div class="challenge-banner hidden" id="challengeBanner">
+      <span id="challengeText"></span>
+      <button class="cta small" id="challengeAcceptBtn">ACCEPT</button>
+    </div>
     <div class="menu-row">
       <button class="cta" id="freeModeBtn">FREE MODE 🏆</button>
       <button class="cta secondary" id="learnModeBtn">LEARN MODE</button>
@@ -566,6 +578,7 @@
     <div id="endExtra" style="font-family:var(--mono); font-size:12px; color:var(--text-dim); white-space:pre-line; line-height:1.6;"></div>
     <div class="menu-row">
       <button class="cta" id="retryBtn">TRY AGAIN</button>
+      <button class="cta secondary hidden" id="shareBtn">SHARE 🔗</button>
       <button class="cta secondary" id="toMenuBtn">MENU</button>
     </div>
   </div>
@@ -802,6 +815,14 @@
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
+  // Friend challenge links look like  ?beat=47&lang=fr  — read once on load.
+  let pendingChallenge = null;
+  try{
+    const qp = new URLSearchParams(location.search);
+    const beat = parseInt(qp.get('beat'), 10);
+    if(beat > 0 && beat <= 10000) pendingChallenge = { beat, lang: qp.get('lang') === 'fr' ? 'fr' : 'en' };
+  }catch(e){}
+  let lastRun = null;
   function dayDiff(aKey, bKey){
     const a = new Date(aKey + 'T00:00:00'), b = new Date(bKey + 'T00:00:00');
     return Math.round((b - a) / 86400000);
@@ -858,9 +879,15 @@
     projectId: "acsent-18b7a",
     storageBucket: "acsent-18b7a.firebasestorage.app",
     messagingSenderId: "69880410292",
-    appId: "1:69880410292:web:07b314edc1afd3eb2aa7e1"
+    appId: "1:69880410292:web:07b314edc1afd3eb2aa7e1",
+    // Paste your Google Analytics "G-XXXXXXXXXX" id here (Firebase console > Project settings) to turn analytics on.
+    measurementId: ""
   };
-  let fbAuth = null, fbDb = null, currentUser = null, cloudSaveTimer = null;
+  let fbAuth = null, fbDb = null, currentUser = null, cloudSaveTimer = null, fbAnalytics = null;
+  // Safe no-op when analytics isn't configured, so the game never breaks because of tracking.
+  function track(name, params){
+    try{ if(fbAnalytics) fbAnalytics.logEvent(name, params || {}); }catch(e){}
+  }
   function fbReady(){ return !!(fbAuth && FIREBASE_CONFIG.apiKey !== "PASTE_ME"); }
 
   try{
@@ -868,6 +895,7 @@
       firebase.initializeApp(FIREBASE_CONFIG);
       fbAuth = firebase.auth();
       fbDb = firebase.firestore();
+      if(FIREBASE_CONFIG.measurementId && firebase.analytics){ try{ fbAnalytics = firebase.analytics(); }catch(e){} }
       fbAuth.onAuthStateChanged(onAuthChanged);
     }
   }catch(e){ console.warn('Firebase not configured yet', e); }
@@ -906,24 +934,62 @@
     }
   }
 
+  // ---- merging a cloud save with this device's save ----
+  // Old behaviour: whichever save had the higher level replaced the other completely, so skins, level stars
+  // or stats earned on the "losing" device were lost. Now collections are combined and numbers keep their best value.
+  function unionArr(a, b){ return Array.from(new Set([].concat(a || [], b || []))); }
+  function mergeMaps(a, b){
+    const out = Object.assign({}, a || {});
+    Object.keys(b || {}).forEach(k=>{
+      const x = out[k], y = b[k];
+      out[k] = (typeof x === 'number' && typeof y === 'number') ? Math.max(x, y) : (x || y);
+    });
+    return out;
+  }
+  function progressOf(sv){ return (sv.level||1)*1000 + (sv.xp||0); }
+  function mergeStats(a, b){
+    const x = Object.assign(defaultStats(), a || {}), y = Object.assign(defaultStats(), b || {});
+    const out = {};
+    Object.keys(defaultStats()).forEach(k=>{
+      if(k === 'firstPlayed') out[k] = Math.min(x[k] || Date.now(), y[k] || Date.now());
+      else if(k === 'lastPlayDay') out[k] = [x[k], y[k]].filter(Boolean).sort().pop() || null;
+      else out[k] = Math.max(x[k] || 0, y[k] || 0);   // max, never sum: both devices may already include the same runs
+    });
+    return out;
+  }
+  function mergeSaves(local, cloud){
+    const base = progressOf(cloud) > progressOf(local) ? cloud : local;   // more advanced save decides coins, XP, level, settings
+    const other = base === cloud ? local : cloud;
+    const m = Object.assign(defaultSave(), other, base);
+    m.ownedCharSkins   = unionArr(local.ownedCharSkins, cloud.ownedCharSkins);
+    m.ownedStairSkins  = unionArr(local.ownedStairSkins, cloud.ownedStairSkins);
+    m.ownedBackdrops   = unionArr(local.ownedBackdrops, cloud.ownedBackdrops);
+    m.redeemedCodes    = unionArr(local.redeemedCodes, cloud.redeemedCodes);
+    m.levelStars       = mergeMaps(local.levelStars, cloud.levelStars);
+    m.completedLevels  = mergeMaps(local.completedLevels, cloud.completedLevels);
+    m.claimedLevelRewards = mergeMaps(local.claimedLevelRewards, cloud.claimedLevelRewards);
+    m.claimedFreeRewards  = mergeMaps(local.claimedFreeRewards, cloud.claimedFreeRewards);
+    m.claimedComboRewards = mergeMaps(local.claimedComboRewards, cloud.claimedComboRewards);
+    m.unlockedLevel    = Math.max(local.unlockedLevel || 1, cloud.unlockedLevel || 1);
+    m.bestScoreFree    = Math.max(local.bestScoreFree || 0, cloud.bestScoreFree || 0);
+    const bestSrc = (cloud.bestScoreFree || 0) > (local.bestScoreFree || 0) ? cloud : local;
+    m.bestFreeStepDurations = bestSrc.bestFreeStepDurations || [];
+    m.stats = mergeStats(local.stats, cloud.stats);
+    return m;
+  }
+
   async function pullCloudSave(uid){
     if(!fbDb) return;
     try{
       const doc = await fbDb.collection('saves').doc(uid).get();
       if(doc.exists){
         const cloud = doc.data();
-        const cloudTotal = (cloud.level||1)*1000 + (cloud.xp||0);
-        const localTotal = (save.level||1)*1000 + (save.xp||0);
-        if(cloudTotal > localTotal){
-          const localStats = save.stats;
-          save = Object.assign(defaultSave(), cloud);
-          save.stats = Object.assign(defaultStats(), cloud.stats || {});
-          // never let a cloud load wipe out stats that are further along on this device
-          if(localStats && (localStats.runs||0) > (save.stats.runs||0)) save.stats = localStats;
-          localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+        const beforeJson = JSON.stringify(save);
+        save = mergeSaves(save, cloud);
+        if(JSON.stringify(save) !== beforeJson){
+          try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){}
           refreshHud(); refreshMenu();
-          showToast('☁️ Cloud save loaded');
-          return;
+          if(progressOf(cloud) > progressOf(JSON.parse(beforeJson))) showToast('☁️ Cloud save loaded');
         }
       }
       pushCloudSave();
@@ -949,6 +1015,8 @@
   async function submitLeaderboardScore(stepsPerSecond, score){
     if(!currentUser || !fbDb) return;
     if(save.leaderboardOptOut) return;
+    score = Math.floor(score);
+    if(!(score > 0) || !(stepsPerSecond > 0)) return;
     try{
       const ref = fbDb.collection('leaderboard').doc(leaderboardDocId(save.language));
       const existing = await ref.get();
@@ -956,7 +1024,7 @@
       const oldSps = existing.exists ? (existing.data().stepsPerSecond || 0) : 0;
       if(!existing.exists || beatsExisting(score, stepsPerSecond, oldScore, oldSps)){
         // uid-derived tag lets the leaderboard tell apart two players who picked the same nickname
-        await ref.set({ name: (save.nickname || currentUser.displayName || 'Anonymous'), tag: currentUser.uid.slice(-4), stepsPerSecond, score, language: save.language, updatedAt: Date.now() });
+        await ref.set({ name: String(save.nickname || currentUser.displayName || 'Anonymous').slice(0,16), tag: currentUser.uid.slice(-4), stepsPerSecond, score, language: save.language, updatedAt: Date.now() });
       }
     }catch(e){ console.warn('Leaderboard submit failed', e); }
   }
@@ -990,16 +1058,16 @@
     }
     list.innerHTML = '<div style="font-family:var(--mono); font-size:11px; color:var(--text-dim);">Loading…</div>';
     try{
-      const snap = await fbDb.collection('leaderboard').orderBy('score','desc').limit(200).get();
-      const rows = [];
-      snap.forEach(doc=>rows.push(doc.data()));
-      // docs saved before this update won't have a language field — treat those as English
-      const filtered = rows.filter(d => (d.language || 'en') === leaderboardLangTab);
-      filtered.sort((a,b)=>{
-        if((b.score||0) !== (a.score||0)) return (b.score||0) - (a.score||0);
-        return (b.stepsPerSecond||0) - (a.stepsPerSecond||0);
-      });
-      const top = filtered.slice(0,10);
+      // Ask Firestore for only the top 10 of this language (10 reads instead of 200).
+      // Needs the composite index in firestore.indexes.json: language ↑, score ↓, stepsPerSecond ↓.
+      const snap = await fbDb.collection('leaderboard')
+        .where('language', '==', leaderboardLangTab)
+        .orderBy('score', 'desc')
+        .orderBy('stepsPerSecond', 'desc')
+        .limit(10)
+        .get();
+      const top = [];
+      snap.forEach(doc=>top.push(doc.data()));
       // count how many times each display name appears in the visible list — only players
       // who share a name with someone else get the disambiguating #tag suffix
       const nameCounts = {};
@@ -1135,29 +1203,50 @@
   }
 
   /* ---------- gift codes ---------- */
-  const GIFT_CODES = {
-    'devpower': { desc: 'unlocks every skin in the game' },
-    'newone':   { desc: 'unlocks the Aetherial Drift backdrop' }
-  };
+  // Codes are NOT stored in this file. Each code is a document in the Firestore collection "giftCodes"
+  // (document id = the code, fields: reward, desc). Rules let anyone read one code by exact name but not list them.
+  // reward formats: "all_skins" | "char:<id>" | "stair:<id>" | "backdrop:<id>" | "coins:<n>" | "gems:<n>"
   function grantAllSkins(){
     CHAR_SKINS.forEach(s=>grantSkin('char', s.id));
     STAIR_SKINS.forEach(s=>grantSkin('stair', s.id));
     BACKDROPS.forEach(s=>grantSkin('backdrop', s.id));
   }
-  function redeemGiftCode(raw){
+  function applyGiftReward(reward){
+    const parts = String(reward || '').split(':');
+    const kind = parts[0], val = parts[1];
+    if(kind === 'all_skins'){ grantAllSkins(); return true; }
+    if(kind === 'coins'){ const n = Math.min(parseInt(val, 10) || 0, 5000); if(n > 0){ save.coins += n; return true; } return false; }
+    if(kind === 'gems'){ const n = Math.min(parseInt(val, 10) || 0, 500); if(n > 0){ save.gems += n; return true; } return false; }
+    const lists = { char: CHAR_SKINS, stair: STAIR_SKINS, backdrop: BACKDROPS };
+    if(lists[kind] && lists[kind].some(s=>s.id === val)){ grantSkin(kind, val); return true; }
+    return false;
+  }
+  let redeeming = false;
+  async function redeemGiftCode(raw){
     const code = (raw||'').trim().toLowerCase();
     const statusEl = document.getElementById('giftStatusMsg');
-    if(!code){ statusEl.style.color='var(--text-dim)'; statusEl.textContent='Type a code first.'; return; }
-    if(!GIFT_CODES[code]){ statusEl.style.color='var(--danger)'; statusEl.textContent='That code is not valid.'; return; }
-    if(save.redeemedCodes.includes(code)){ statusEl.style.color='var(--text-dim)'; statusEl.textContent='Already redeemed on this account.'; return; }
-    if(code === 'devpower'){ grantAllSkins(); }
-    if(code === 'newone'){ grantSkin('backdrop', 'aetherial'); }
-    save.redeemedCodes.push(code);
-    persistSave();
-    refreshHud();
-    statusEl.style.color='var(--glow)';
-    statusEl.textContent = `Code redeemed — ${GIFT_CODES[code].desc}.`;
-    showToast(`🎁 Code "${code}" redeemed!`);
+    const say = (color, text)=>{ statusEl.style.color = color; statusEl.textContent = text; };
+    if(!code){ say('var(--text-dim)', 'Type a code first.'); return; }
+    if(!/^[a-z0-9_-]{2,32}$/.test(code)){ say('var(--danger)', 'That code is not valid.'); return; }
+    if(save.redeemedCodes.includes(code)){ say('var(--text-dim)', 'Already redeemed on this account.'); return; }
+    if(!fbDb){ say('var(--danger)', 'Codes need an internet connection — try again in a moment.'); return; }
+    if(redeeming) return;
+    redeeming = true;
+    say('var(--text-dim)', 'Checking code…');
+    try{
+      const snap = await fbDb.collection('giftCodes').doc(code).get();
+      if(!snap.exists){ say('var(--danger)', 'That code is not valid.'); return; }
+      const data = snap.data() || {};
+      if(!applyGiftReward(data.reward)){ say('var(--danger)', 'That code could not be applied.'); return; }
+      save.redeemedCodes.push(code);
+      persistSave();
+      refreshHud();
+      say('var(--glow)', `Code redeemed — ${data.desc || 'reward added'}.`);
+      showToast(`🎁 Code "${code}" redeemed!`);
+      track('gift_code_redeemed', { code });
+    }catch(e){
+      say('var(--danger)', 'Could not check this code right now. Try again later.');
+    }finally{ redeeming = false; }
   }
 
   /* ---------- skins ---------- */
@@ -1873,6 +1962,11 @@
     state.multiplier = comboMultiplier(state.combo);
     state.score += state.multiplier;
     scoreValEl.textContent = state.score;
+    if(state.mode.challenge && !state.challengeHit && state.score >= state.mode.challenge){
+      state.challengeHit = true;
+      showToast('🎯 Challenge beaten!');
+      track('challenge_beaten', { beat: state.mode.challenge });
+    }
     updateComboDisplay();
     updateFlameState();
     checkComboMilestones();
@@ -2063,7 +2157,19 @@
 
     finalScoreEl.textContent = state.score;
     const reviveNote = state.revivesUsed ? `\nrevives used: ${state.revivesUsed}` : '';
-    endExtra.textContent = `+${xpGain} XP  ·  +${coinGain} coins` + (rewardMsgs.length ? '\n' + rewardMsgs.join('\n') : '') + reviveNote;
+    let challengeNote = '';
+    if(state.mode.challenge){
+      challengeNote = state.score >= state.mode.challenge
+        ? `\n🎯 Challenge beaten (${state.mode.challenge})!`
+        : `\n🎯 Challenge missed by ${state.mode.challenge - state.score} step${state.mode.challenge - state.score === 1 ? '' : 's'}`;
+    }
+    endExtra.textContent = `+${xpGain} XP  ·  +${coinGain} coins` + (rewardMsgs.length ? '\n' + rewardMsgs.join('\n') : '') + reviveNote + challengeNote;
+    const runSecs = Math.max(1, (Date.now() - (state.startTime||Date.now())) / 1000);
+    lastRun = (state.mode.type === 'free' && state.score > 0)
+      ? { score: state.score, sps: state.currentStepIndex / runSecs, bestCombo: state.bestComboRun, lang: save.language }
+      : null;
+    document.getElementById('shareBtn').classList.toggle('hidden', !lastRun);
+    track('run_end', { mode: state.mode.type, score: state.score, won: !!won, lang: save.language });
     endScreen.classList.remove('hidden');
   }
 
@@ -2159,6 +2265,14 @@
       document.getElementById('freeModeBtn').classList.remove('locked');
       freeLockMsg.textContent = "";
     }
+    const banner = document.getElementById('challengeBanner');
+    if(banner){
+      if(pendingChallenge){
+        document.getElementById('challengeText').textContent =
+          `🎯 A friend climbed ${pendingChallenge.beat} steps in ${pendingChallenge.lang === 'fr' ? 'French' : 'English'}. Can you beat it?`;
+        banner.classList.remove('hidden');
+      } else banner.classList.add('hidden');
+    }
     const note = document.getElementById('competitiveNote');
     if(note){
       note.textContent = currentUser
@@ -2180,6 +2294,20 @@
     mainMenu.classList.add('hidden');
     document.getElementById('leaderboardScreen').classList.remove('hidden');
     loadLeaderboard(save.language);
+  });
+
+  document.getElementById('challengeAcceptBtn').addEventListener('click', ()=>{
+    if(!pendingChallenge) return;
+    const ch = pendingChallenge;
+    if(save.language !== ch.lang){
+      save.language = ch.lang;
+      persistSave();
+      showToast(ch.lang === 'fr' ? 'Langue réglée sur le français pour ce défi' : 'Typing language set to English for this challenge');
+    }
+    pendingChallenge = null;
+    try{ history.replaceState(null, '', location.href.split(/[?#]/)[0]); }catch(e){}
+    track('challenge_accepted', { beat: ch.beat, lang: ch.lang });
+    startGame({ type:'free', challenge: ch.beat });
   });
 
   document.getElementById('freeModeBtn').addEventListener('click', ()=>{
@@ -2246,8 +2374,20 @@
   });
   document.getElementById('retryBtn').addEventListener('click', ()=>{
     const m = state.mode;
-    startGame(m.type === 'free' ? {type:'free'} :
+    startGame(m.type === 'free' ? {type:'free', challenge:m.challenge} :
       { type:m.type, sequence:m.sequence, pool:m.pool, count:m.count, time:m.time, timeDecay:m.timeDecay, label:m.label, levelId:m.levelId });
+  });
+  document.getElementById('shareBtn').addEventListener('click', async ()=>{
+    if(!lastRun) return;
+    const base = location.href.split(/[?#]/)[0];
+    const link = `${base}?beat=${lastRun.score}&lang=${lastRun.lang}`;
+    const text = `ASCENT 🧗 ${lastRun.score} steps · ${lastRun.sps.toFixed(1)}/s · 🔥 combo ${lastRun.bestCombo}\nBeat me: ${link}`;
+    track('share_click', { score: lastRun.score, lang: lastRun.lang });
+    try{
+      if(navigator.share){ await navigator.share({ text }); return; }
+    }catch(e){ if(e && e.name === 'AbortError') return; }
+    try{ await navigator.clipboard.writeText(text); showToast('📋 Copied — paste it to a friend!'); }
+    catch(e){ window.prompt('Copy this and send it to a friend:', text); }
   });
   document.getElementById('toMenuBtn').addEventListener('click', ()=>{
     endScreen.classList.add('hidden');
