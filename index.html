@@ -161,7 +161,7 @@
     100%{ transform:translateX(-50%) scale(1,1); }
   }
 
-  .overlay{ position:absolute; inset:0; background:var(--bg-deep); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; text-align:center; gap:12px; padding:20px; overflow-y:auto; }
+  .overlay{ position:absolute; inset:0; background:var(--bg-deep); display:flex; flex-direction:column; align-items:center; justify-content:center; justify-content:safe center; z-index:50; text-align:center; gap:12px; padding:20px; overflow-y:auto; }
   .overlay h1{ font-family:var(--display); font-weight:600; font-size:32px; letter-spacing:0.02em; }
   .overlay h1 span{ color:var(--glow); font-weight:600; }
   .overlay p{ color:var(--text-dim); font-size:13px; max-width:420px; line-height:1.6; font-family:var(--sans); }
@@ -209,6 +209,12 @@
   .nickname-input{ flex:1; min-width:0; background:var(--bg-deep); border:1px solid var(--panel-border); border-radius:6px; padding:9px 10px; font-family:var(--sans); font-weight:600; font-size:14px; color:var(--text); }
   .nickname-input:focus{ outline:none; border-color:var(--glow); }
   .profile-sub{ font-family:var(--mono); font-size:10.5px; color:var(--text-dim); margin-top:7px; line-height:1.5; }
+  .stats-card{ width:340px; max-width:100%; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:14px; padding:14px 16px; text-align:left; }
+  .stats-card h2{ font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:0.12em; color:var(--glow); margin-bottom:10px; text-transform:uppercase; }
+  .stats-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; }
+  .stat-item b{ display:block; font-family:var(--mono); font-size:17px; color:var(--text); font-weight:700; }
+  .stat-item span{ font-family:var(--sans); font-size:10.5px; color:var(--text-dim); letter-spacing:0.03em; }
+  .stats-since{ font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:12px; }
   .toggle-row{ display:flex; align-items:center; gap:12px; width:340px; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:12px; padding:13px 15px; text-align:left; }
   .toggle-label{ flex:1; }
   .toggle-label b{ display:block; font-size:12px; font-family:var(--sans); }
@@ -467,6 +473,22 @@
       <div class="menu-hud-item">🪙 <span id="accountCoins">0</span></div>
       <div class="menu-hud-item">💎 <span id="accountGems">0</span></div>
       <div class="menu-hud-item">🏆 Best <span id="accountBest">0</span></div>
+    </div>
+    <div class="stats-card" id="statsCard">
+      <h2>Your stats</h2>
+      <div class="stats-grid">
+        <div class="stat-item"><b id="stRuns">0</b><span>Runs played</span></div>
+        <div class="stat-item"><b id="stWords">0</b><span>Words typed</span></div>
+        <div class="stat-item"><b id="stAccuracy">–</b><span>Accuracy</span></div>
+        <div class="stat-item"><b id="stWpm">–</b><span>Avg speed (WPM)</span></div>
+        <div class="stat-item"><b id="stCombo">0</b><span>Best combo</span></div>
+        <div class="stat-item"><b id="stSps">–</b><span>Best steps / sec</span></div>
+        <div class="stat-item"><b id="stLevels">0</b><span>Levels cleared</span></div>
+        <div class="stat-item"><b id="stTime">0m</b><span>Time played</span></div>
+        <div class="stat-item"><b id="stStreak">0</b><span>Day streak 🔥</span></div>
+        <div class="stat-item"><b id="stLongest">0</b><span>Longest streak</span></div>
+      </div>
+      <div class="stats-since" id="stSince"></div>
     </div>
     <div class="toggle-row">
       <label class="toggle-switch">
@@ -761,8 +783,48 @@
       showGhost:true,
       bestFreeStepDurations:[],
       language:'en',
-      showTranslation:false
+      showTranslation:false,
+      stats: defaultStats()
     };
+  }
+  // Lifetime stats — tracked per account/device from the first time the player uses the game.
+  function defaultStats(){
+    return {
+      firstPlayed: Date.now(),
+      runs:0, freeRuns:0, levelRuns:0, levelWins:0,
+      words:0, keysCorrect:0, keysWrong:0,
+      playSeconds:0,
+      bestCombo:0, bestStepsPerSec:0,
+      lastPlayDay:null, dayStreak:0, longestDayStreak:0
+    };
+  }
+  function todayKey(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function dayDiff(aKey, bKey){
+    const a = new Date(aKey + 'T00:00:00'), b = new Date(bKey + 'T00:00:00');
+    return Math.round((b - a) / 86400000);
+  }
+  // Called once at the end of every run. Counters are collected in `state` during the run and flushed here,
+  // so we never write to storage on every keystroke.
+  function recordRunStats(opts){
+    const s = save.stats;
+    s.runs++;
+    if(opts.mode === 'free') s.freeRuns++; else s.levelRuns++;
+    if(opts.won) s.levelWins++;
+    s.words += opts.words;
+    s.keysCorrect += opts.keysCorrect;
+    s.keysWrong += opts.keysWrong;
+    s.playSeconds += Math.round(opts.seconds);
+    if(opts.bestCombo > s.bestCombo) s.bestCombo = opts.bestCombo;
+    if(opts.mode === 'free' && opts.stepsPerSecond > s.bestStepsPerSec) s.bestStepsPerSec = opts.stepsPerSecond;
+    const today = todayKey();
+    if(s.lastPlayDay !== today){
+      s.dayStreak = (s.lastPlayDay && dayDiff(s.lastPlayDay, today) === 1) ? s.dayStreak + 1 : 1;
+      s.lastPlayDay = today;
+      if(s.dayStreak > s.longestDayStreak) s.longestDayStreak = s.dayStreak;
+    }
   }
   let save = defaultSave();
   function loadSave(){
@@ -779,6 +841,8 @@
       if(typeof save.showGhost !== 'boolean') save.showGhost = true;
       if(typeof save.language !== 'string') save.language = 'en';
       if(typeof save.showTranslation !== 'boolean') save.showTranslation = false;
+      // older saves have no stats block — start tracking from now and fill in any missing fields
+      save.stats = Object.assign(defaultStats(), save.stats || {});
     }catch(e){ save = defaultSave(); }
   }
   function persistSave(){
@@ -851,7 +915,11 @@
         const cloudTotal = (cloud.level||1)*1000 + (cloud.xp||0);
         const localTotal = (save.level||1)*1000 + (save.xp||0);
         if(cloudTotal > localTotal){
+          const localStats = save.stats;
           save = Object.assign(defaultSave(), cloud);
+          save.stats = Object.assign(defaultStats(), cloud.stats || {});
+          // never let a cloud load wipe out stats that are further along on this device
+          if(localStats && (localStats.runs||0) > (save.stats.runs||0)) save.stats = localStats;
           localStorage.setItem(SAVE_KEY, JSON.stringify(save));
           refreshHud(); refreshMenu();
           showToast('☁️ Cloud save loaded');
@@ -900,6 +968,10 @@
     });
   }
 
+  // Leaderboard names come from other players' documents, so they must never be inserted as raw HTML.
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
   let leaderboardLangTab = 'en';
   async function loadLeaderboard(lang){
     if(lang) leaderboardLangTab = lang;
@@ -935,7 +1007,7 @@
       list.innerHTML = '';
       top.forEach((d, i)=>{
         const n = d.name||'Anonymous';
-        const label = nameCounts[n] > 1 && d.tag ? `${n} #${d.tag}` : n;
+        const label = escapeHtml(nameCounts[n] > 1 && d.tag ? `${n} #${d.tag}` : n);
         const row = document.createElement('div');
         row.className = 'leaderboard-row';
         row.innerHTML = `<span class="rank">#${i+1}</span><span class="name">${label}</span><span class="val">${d.score||0} steps <span style="color:var(--text-dim);">· ${(d.stepsPerSecond||0).toFixed(2)}/s</span></span>`;
@@ -1796,6 +1868,8 @@
     }
 
     state.combo = (state.combo||0) + 1;
+    state.wordsDone++;
+    if(state.combo > state.bestComboRun) state.bestComboRun = state.combo;
     state.multiplier = comboMultiplier(state.combo);
     state.score += state.multiplier;
     scoreValEl.textContent = state.score;
@@ -1970,6 +2044,15 @@
       endSub.textContent = 'steps climbed';
     }
 
+    recordRunStats({
+      mode: state.mode.type, won: !!won && state.mode.type !== 'free',
+      words: state.wordsDone, keysCorrect: state.keysCorrect, keysWrong: state.keysWrong,
+      seconds: Math.max(0, (Date.now() - (state.startTime||Date.now())) / 1000),
+      bestCombo: state.bestComboRun,
+      stepsPerSecond: state.mode.type === 'free'
+        ? state.currentStepIndex / Math.max(1, (Date.now() - (state.startTime||Date.now())) / 1000)
+        : 0
+    });
     grantXP(xpGain);
     grantCoins(coinGain);
     persistSave();
@@ -2001,6 +2084,7 @@
       currentStepIndex:0, typed:"", timerHandle:null, startTime: Date.now(),
       currentWordStartTime: null, stepDurations: [],
       revivesUsed:0, freeRevives:0, claimedComboThisRun:{},
+      keysCorrect:0, keysWrong:0, wordsDone:0, bestComboRun:0,
       inputLockedUntil: 0,
       mode: Object.assign({ words: [], bags:{} }, mode)
     };
@@ -2025,10 +2109,11 @@
     const expected = target[state.typed.length];
     const got = e.key === ' ' ? ' ' : e.key.toLowerCase();
     if(got === expected){
+      state.keysCorrect++;
       state.typed += expected;
       renderWordBanner();
       if(state.typed.length === target.length) onCorrectStep();
-    } else { onFail(); }
+    } else { state.keysWrong++; onFail(); }
   });
 
   stageEl.addEventListener('mousemove', (e)=>{
@@ -2349,7 +2434,36 @@
     showToast(save.showTranslation ? '🌍 Translation hints on' : '🌍 Translation hints off');
   });
 
+  function formatDuration(sec){
+    sec = Math.max(0, Math.round(sec));
+    const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
+    if(h > 0) return h + 'h ' + m + 'm';
+    if(m > 0) return m + 'm';
+    return sec + 's';
+  }
+  function renderStats(){
+    const st = save.stats || defaultStats();
+    const keys = st.keysCorrect + st.keysWrong;
+    const set = (id, v)=>{ const el = document.getElementById(id); if(el) el.textContent = v; };
+    set('stRuns', st.runs);
+    set('stWords', st.words.toLocaleString());
+    set('stAccuracy', keys > 0 ? Math.round(st.keysCorrect / keys * 100) + '%' : '–');
+    // standard WPM definition: 5 characters = 1 word, over time actually spent in runs
+    set('stWpm', st.playSeconds >= 10 ? Math.round((st.keysCorrect / 5) / (st.playSeconds / 60)) : '–');
+    set('stCombo', st.bestCombo);
+    set('stSps', st.bestStepsPerSec > 0 ? st.bestStepsPerSec.toFixed(2) : '–');
+    set('stLevels', Object.keys(save.completedLevels || {}).length);
+    set('stTime', formatDuration(st.playSeconds));
+    // a streak only counts if you played today or yesterday — otherwise it has lapsed
+    const today = todayKey();
+    const alive = st.lastPlayDay && dayDiff(st.lastPlayDay, today) <= 1;
+    set('stStreak', alive ? st.dayStreak : 0);
+    set('stLongest', st.longestDayStreak);
+    set('stSince', 'Tracking since ' + new Date(st.firstPlayed).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }));
+  }
+
   function refreshAccountScreen(){
+    renderStats();
     const skin = CHAR_SKINS.find(s=>s.id===save.equippedCharSkin) || CHAR_SKINS[0];
     avatarCircle.style.background = skin.torso;
     avatarCircle.textContent = displayName().charAt(0).toUpperCase() || '?';
