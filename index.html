@@ -216,13 +216,55 @@
   .nickname-input{ flex:1; min-width:0; background:var(--bg-deep); border:1px solid var(--panel-border); border-radius:6px; padding:9px 10px; font-family:var(--sans); font-weight:600; font-size:14px; color:var(--text); }
   .nickname-input:focus{ outline:none; border-color:var(--glow); }
   .profile-sub{ font-family:var(--mono); font-size:10.5px; color:var(--text-dim); margin-top:7px; line-height:1.5; }
-  .stats-card{ width:340px; max-width:100%; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:14px; padding:14px 16px; text-align:left; }
-  .stats-card h2{ font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:0.12em; color:var(--glow); margin-bottom:10px; text-transform:uppercase; }
-  .stats-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; }
-  .stat-item b{ display:block; font-family:var(--mono); font-size:17px; color:var(--text); font-weight:700; }
-  .stat-item span{ font-family:var(--sans); font-size:10.5px; color:var(--text-dim); letter-spacing:0.03em; }
+  /* ---------- stats screen ---------- */
+  .st-sub{ font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:-6px; }
+  .st-wrap{ width:440px; max-width:100%; display:flex; flex-direction:column; gap:10px; text-align:left; }
+  .st-tiles, .st-mini{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .st-tile{ background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:12px; padding:10px 12px; min-width:0; }
+  .st-tile .lbl{ font-family:var(--sans); font-size:10.5px; color:var(--text-dim); letter-spacing:0.04em; }
+  .st-tile .val{ font-family:var(--mono); font-weight:700; font-size:28px; line-height:1.1; color:var(--text); margin-top:3px; white-space:nowrap; }
+  .st-mini .st-tile .val{ font-size:18px; }
+  .st-tile .val small{ font-size:10.5px; font-weight:500; color:var(--text-dim); margin-left:3px; }
+  .st-meter{ height:6px; border-radius:3px; background:rgba(62,255,178,0.16); margin-top:9px; overflow:hidden; }
+  .st-meter i{ display:block; height:100%; border-radius:3px; background:var(--glow); }
+  .st-card{ background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:14px; padding:12px 14px 10px; }
+  .st-card h3{ font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text); }
+  .st-card .hint{ font-family:var(--sans); font-size:10.5px; color:var(--text-dim); margin:2px 0 8px; }
+  .st-chart svg{ width:100%; height:auto; display:block; overflow:visible; touch-action:pan-y; }
+  .st-chart .grid{ stroke:var(--panel-border); stroke-width:1; shape-rendering:crispEdges; }
+  .st-chart .ax{ fill:var(--text-dim); font-family:var(--mono); font-size:9px; }
+  .st-chart .tv{ fill:var(--text); font-family:var(--mono); font-size:10px; font-weight:700; }
+  .st-chart .line{ fill:none; stroke:var(--glow); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .st-chart .area{ fill:var(--glow); fill-opacity:0.10; }
+  .st-chart .dot{ fill:var(--glow); stroke:var(--panel-bg); stroke-width:2; }
+  .st-chart .xh{ stroke:var(--text-dim); stroke-width:1; }
+  .st-chart .hit{ fill:transparent; }
+  .st-chart .bar{ fill:var(--glow); fill-opacity:0.8; }
+  .st-chart .bar.today{ fill:var(--amber); fill-opacity:1; }
+  .st-chart .bw:hover .bar{ fill-opacity:1; }
+  .st-chart .cell{ fill:var(--glow); }
+  .st-chart .cell.lv0{ fill:#ffffff; fill-opacity:0.06; }
+  .st-chart .cell.lv1{ fill-opacity:0.28; } .st-chart .cell.lv2{ fill-opacity:0.5; }
+  .st-chart .cell.lv3{ fill-opacity:0.75; } .st-chart .cell.lv4{ fill-opacity:1; }
+  .st-chart .cell.now{ stroke:var(--amber); stroke-width:1.5; }
+  .st-chart .cell:hover{ stroke:var(--text); stroke-width:1.5; }
+  .st-heat{ display:flex; flex-wrap:wrap; gap:12px 20px; align-items:center; justify-content:center; }
+  .st-heat svg{ width:240px; flex:0 0 auto; }
+  .st-streak{ font-family:var(--sans); font-size:12px; color:var(--text); line-height:1.5; }
+  .st-streak b{ font-family:var(--mono); font-size:30px; font-weight:700; margin-right:4px; }
+  .st-streak span{ display:block; font-size:10.5px; color:var(--text-dim); }
+  .st-legend{ margin-top:8px; font-size:10px; color:var(--text-dim); display:flex; align-items:center; gap:4px; }
+  .st-legend i{ width:11px; height:11px; border-radius:3px; background:var(--glow); display:inline-block; }
+  .st-legend i.lv0{ background:#fff; opacity:0.06; } .st-legend i.lv1{ opacity:0.28; } .st-legend i.lv2{ opacity:0.5; }
+  .st-legend i.lv3{ opacity:0.75; }
+  .st-empty{ font-family:var(--sans); font-size:11.5px; color:var(--text-dim); padding:22px 8px; text-align:center; }
+  .st-table summary{ cursor:pointer; font-family:var(--sans); font-size:11px; color:var(--text-dim); }
+  .st-table table{ width:100%; border-collapse:collapse; margin-top:8px; font-family:var(--mono); font-size:10.5px; }
+  .st-table th{ text-align:left; color:var(--text-dim); font-weight:500; padding:3px 4px; }
+  .st-table td{ padding:4px; border-top:1px solid var(--panel-border); }
+  #chartTip{ position:fixed; left:0; top:0; z-index:300; pointer-events:none; opacity:0; transition:opacity 0.1s; background:var(--bg-deep); border:1px solid var(--panel-border); border-radius:8px; padding:6px 9px; font-family:var(--mono); font-size:10.5px; line-height:1.5; color:var(--text); white-space:nowrap; box-shadow:0 4px 14px rgba(0,0,0,0.4); }
+  #chartTip b{ color:var(--amber); }
   .challenge-banner{ width:340px; max-width:100%; background:var(--panel-bg); border:1px solid var(--amber); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:10px; justify-content:space-between; text-align:left; font-family:var(--sans); font-size:12.5px; line-height:1.4; }
-  .stats-since{ font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:12px; }
   .toggle-row{ display:flex; align-items:center; gap:12px; width:340px; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:12px; padding:13px 15px; text-align:left; }
   .toggle-label{ flex:1; }
   .toggle-label b{ display:block; font-size:12px; font-family:var(--sans); }
@@ -420,6 +462,7 @@
       <button class="cta secondary small" id="menuGiftBtn">GIFTS</button>
       <button class="cta secondary small" id="menuAuthBtn">SIGN IN</button>
       <button class="cta secondary small" id="menuLeaderboardBtn">🏆 BOARD</button>
+      <button class="cta secondary small" id="menuStatsBtn">📊 STATS</button>
     </div>
     <div class="gauge-wrap" id="menuGaugeWrap"></div>
     <p>Type the word above the stairs to climb higher. Miss a letter, or run out of time, and you fall. Chain words without missing to build a combo — big streaks earn bonus hearts, free revives, and rare skins.</p>
@@ -486,22 +529,6 @@
       <div class="menu-hud-item">💎 <span id="accountGems">0</span></div>
       <div class="menu-hud-item">🏆 Best <span id="accountBest">0</span></div>
     </div>
-    <div class="stats-card" id="statsCard">
-      <h2>Your stats</h2>
-      <div class="stats-grid">
-        <div class="stat-item"><b id="stRuns">0</b><span>Runs played</span></div>
-        <div class="stat-item"><b id="stWords">0</b><span>Words typed</span></div>
-        <div class="stat-item"><b id="stAccuracy">–</b><span>Accuracy</span></div>
-        <div class="stat-item"><b id="stWpm">–</b><span>Avg speed (WPM)</span></div>
-        <div class="stat-item"><b id="stCombo">0</b><span>Best combo</span></div>
-        <div class="stat-item"><b id="stSps">–</b><span>Best steps / sec</span></div>
-        <div class="stat-item"><b id="stLevels">0</b><span>Levels cleared</span></div>
-        <div class="stat-item"><b id="stTime">0m</b><span>Time played</span></div>
-        <div class="stat-item"><b id="stStreak">0</b><span>Day streak 🔥</span></div>
-        <div class="stat-item"><b id="stLongest">0</b><span>Longest streak</span></div>
-      </div>
-      <div class="stats-since" id="stSince"></div>
-    </div>
     <div class="toggle-row">
       <label class="toggle-switch">
         <input type="checkbox" id="leaderboardOptToggle" />
@@ -547,6 +574,13 @@
       <button class="cta" id="accountSignBtn">SIGN IN WITH GOOGLE</button>
     </div>
     <button class="cta secondary" id="accountBackBtn">BACK</button>
+  </div>
+
+  <div id="statsScreen" class="overlay hidden">
+    <h1>YOUR <span>STATS</span></h1>
+    <div class="st-sub" id="stSince"></div>
+    <div class="st-wrap" id="statsBody"></div>
+    <button class="cta secondary" id="statsBackBtn">BACK</button>
   </div>
 
   <div id="leaderboardScreen" class="overlay hidden">
@@ -808,7 +842,9 @@
       words:0, keysCorrect:0, keysWrong:0,
       playSeconds:0,
       bestCombo:0, bestStepsPerSec:0,
-      lastPlayDay:null, dayStreak:0, longestDayStreak:0
+      lastPlayDay:null, dayStreak:0, longestDayStreak:0,
+      daily:{},      // "YYYY-MM-DD" -> {r:runs, w:words, s:seconds, c:keysCorrect, x:keysWrong}  (last 70 days)
+      recent:[]      // last 30 runs: {t:time, m:"free"|"level", wpm, acc, sc}
     };
   }
   function todayKey(){
@@ -846,6 +882,25 @@
       s.lastPlayDay = today;
       if(s.dayStreak > s.longestDayStreak) s.longestDayStreak = s.dayStreak;
     }
+    // history that the Stats screen draws its charts from
+    if(!s.daily || typeof s.daily !== 'object') s.daily = {};
+    if(!Array.isArray(s.recent)) s.recent = [];
+    const secs = Math.max(0, opts.seconds), keyTotal = opts.keysCorrect + opts.keysWrong;
+    const day = s.daily[today] || (s.daily[today] = { r:0, w:0, s:0, c:0, x:0 });
+    day.r++; day.w += opts.words; day.s += Math.round(secs); day.c += opts.keysCorrect; day.x += opts.keysWrong;
+    s.daily = pruneDaily(s.daily);
+    if(secs >= 5 && opts.keysCorrect > 0){
+      s.recent.push({ t: Date.now(), m: opts.mode === 'free' ? 'free' : 'level',
+        wpm: Math.round((opts.keysCorrect / 5) / (secs / 60)),
+        acc: keyTotal ? Math.round(opts.keysCorrect / keyTotal * 100) : 100,
+        sc: opts.score || 0 });
+      if(s.recent.length > 30) s.recent = s.recent.slice(-30);
+    }
+  }
+  function pruneDaily(d){
+    const keys = Object.keys(d).sort();
+    keys.slice(0, Math.max(0, keys.length - 70)).forEach(k=>{ delete d[k]; });
+    return d;
   }
   let save = defaultSave();
   function loadSave(){
@@ -953,6 +1008,21 @@
     Object.keys(defaultStats()).forEach(k=>{
       if(k === 'firstPlayed') out[k] = Math.min(x[k] || Date.now(), y[k] || Date.now());
       else if(k === 'lastPlayDay') out[k] = [x[k], y[k]].filter(Boolean).sort().pop() || null;
+      else if(k === 'daily'){
+        const d = {};
+        [x.daily, y.daily].forEach(src=>Object.keys(src || {}).forEach(day=>{
+          const v = src[day] || {}, cur = d[day] || { r:0, w:0, s:0, c:0, x:0 };
+          ['r','w','s','c','x'].forEach(f=>{ cur[f] = Math.max(cur[f] || 0, v[f] || 0); });
+          d[day] = cur;
+        }));
+        out.daily = pruneDaily(d);
+      }
+      else if(k === 'recent'){
+        const seen = {}, arr = [];
+        [].concat(x.recent || [], y.recent || []).forEach(r=>{ if(r && r.t && !seen[r.t]){ seen[r.t] = 1; arr.push(r); } });
+        arr.sort((p,q)=>p.t - q.t);
+        out.recent = arr.slice(-30);
+      }
       else out[k] = Math.max(x[k] || 0, y[k] || 0);   // max, never sum: both devices may already include the same runs
     });
     return out;
@@ -1084,7 +1154,14 @@
       if(top.length===0) msg.textContent = 'No runs yet — be the first on the board.';
     }catch(e){
       list.innerHTML = '';
-      msg.textContent = 'Could not load leaderboard: ' + e.message;
+      const raw = String((e && e.message) || e);
+      const link = raw.match(/https:\/\/console\.firebase\.google\.com\/\S+/);
+      if(link && /index/i.test(raw)){
+        // Firestore wants a one-time index for this query; the error carries a link that creates it
+        msg.innerHTML = 'The leaderboard needs a one-time setup. <a href="' + escapeHtml(link[0]) + '" target="_blank" rel="noopener" style="color:var(--glow);text-decoration:underline;">Create the index</a>, wait a few minutes, then reload.';
+      } else {
+        msg.textContent = 'Could not load leaderboard: ' + raw;
+      }
     }
   }
 
@@ -1471,7 +1548,8 @@
     long: ["ascension","gravité","escalier","élan","couloir","seuil","lumineux","cascade","vélocité","fracture","horizon urbain","horizon","plateau","rocher","fissure","avalanche","altitude","effort","triomphe","ancre","tourbillon","tempête","vagabond","odyssée","sommet","zénith","parangon","citadelle","labyrinthe","cathédrale","obsidienne","fantôme","éclipse","tsunami","blizzard","sanctuaire","forteresse","alliance","crescendo","infini","gant","marathon","résonance","tourbillon","cyclone","ouverture","éclat","sérénité","ténacité","vigilant","catalyseur","domination","émissaire","frontière","gardien","harmonique","illusion","jonction","cinétique","monolithe","nocturne","paradis","dilemme","imprudent","symphonie","turbulent","courant sous-marin","front d'onde"]
   };
   function toTypable(s){
-    return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
+    // œ and æ don't decompose with NFD, so spell them out (otherwise "vœu" would become "vu")
+    return s.toLowerCase().replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
   }
   const POOLS_FR = { short:[], medium:[], long:[] };
   const EN_TO_FR = {};
@@ -2142,7 +2220,7 @@
       mode: state.mode.type, won: !!won && state.mode.type !== 'free',
       words: state.wordsDone, keysCorrect: state.keysCorrect, keysWrong: state.keysWrong,
       seconds: Math.max(0, (Date.now() - (state.startTime||Date.now())) / 1000),
-      bestCombo: state.bestComboRun,
+      bestCombo: state.bestComboRun, score: state.score,
       stepsPerSecond: state.mode.type === 'free'
         ? state.currentStepIndex / Math.max(1, (Date.now() - (state.startTime||Date.now())) / 1000)
         : 0
@@ -2581,29 +2659,202 @@
     if(m > 0) return m + 'm';
     return sec + 's';
   }
-  function renderStats(){
+  /* ---------- stats screen: tiles + charts (plain SVG, no libraries) ---------- */
+  const STAT_DAYS = 14, HEAT_WEEKS = 8;
+  function niceCeil(v, steps){ for(let i=0;i<steps.length;i++){ if(v <= steps[i]) return steps[i]; } return Math.ceil(v/100)*100; }
+  function keyFromDate(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  function keyForOffset(n){ const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()-n); return keyFromDate(d); }
+  function prettyDay(key){ return new Date(key + 'T12:00:00').toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' }); }
+  function fmtMinutes(sec){ return sec < 60 ? Math.round(sec) + 's' : Math.round(sec/60) + ' min'; }
+
+  let chartTipEl = null;
+  function tipEl(){
+    if(!chartTipEl){ chartTipEl = document.createElement('div'); chartTipEl.id = 'chartTip'; document.body.appendChild(chartTipEl); }
+    return chartTipEl;
+  }
+  function showTip(html, cx, cy){
+    const t = tipEl();
+    t.innerHTML = html;
+    t.style.opacity = '1';
+    const r = t.getBoundingClientRect();
+    let x = cx + 12, y = cy - r.height - 10;
+    if(x + r.width > window.innerWidth - 8) x = cx - r.width - 12;
+    if(y < 8) y = cy + 16;
+    t.style.left = Math.max(8, x) + 'px';
+    t.style.top = y + 'px';
+  }
+  function hideTip(){ if(chartTipEl) chartTipEl.style.opacity = '0'; }
+  // one handler per chart: any element with data-tip shows its tooltip on hover / touch
+  function wireTips(host){
+    const on = ev=>{
+      const t = ev.target.closest ? ev.target.closest('[data-tip]') : null;
+      if(t) showTip(t.getAttribute('data-tip'), ev.clientX, ev.clientY); else hideTip();
+    };
+    host.addEventListener('pointermove', on);
+    host.addEventListener('pointerdown', on);
+    host.addEventListener('pointerleave', hideTip);
+  }
+
+  function drawSpeedChart(host, pts){
+    if(pts.length < 2){
+      host.innerHTML = '<div class="st-empty">Finish a couple of runs and your speed trend will show up here.</div>';
+      return;
+    }
+    const W=360, H=150, L=30, R=14, T=16, B=22;
+    const n = pts.length, step = (W-L-R)/(n-1);
+    const maxV = niceCeil(Math.max.apply(null, pts.map(p=>p.wpm)), [20,40,60,80,100,120,160,200]);
+    const X = i => L + i*step, Y = v => T + (1 - v/maxV)*(H-T-B);
+    const base = Y(0);
+    let line = '';
+    pts.forEach((p,i)=>{ line += (i ? ' L' : 'M') + X(i).toFixed(1) + ',' + Y(p.wpm).toFixed(1); });
+    const area = line + ' L' + X(n-1).toFixed(1) + ',' + base + ' L' + X(0).toFixed(1) + ',' + base + ' Z';
+    let grid = '';
+    [0, maxV/2, maxV].forEach(v=>{
+      grid += `<line class="grid" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="ax" x="${L-6}" y="${Y(v)+3}" text-anchor="end">${v}</text>`;
+    });
+    const last = pts[n-1];
+    host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Typing speed over your last ${n} runs. Latest: ${last.wpm} words per minute.">
+      ${grid}
+      <path class="area" d="${area}"/><path class="line" d="${line}"/>
+      <text class="ax" x="${L}" y="${H-6}">older</text><text class="ax" x="${W-R}" y="${H-6}" text-anchor="end">latest</text>
+      <line class="xh" x1="0" x2="0" y1="${T}" y2="${base}" style="display:none"/>
+      <circle class="dot hov" r="4" style="display:none"/>
+      <circle class="dot" cx="${X(n-1)}" cy="${Y(last.wpm)}" r="4"/>
+      <text class="tv" x="${X(n-1)}" y="${Math.max(10, Y(last.wpm) - 9)}" text-anchor="end">${last.wpm}</text>
+      <rect class="hit" x="${L-6}" y="${T}" width="${W-L-R+12}" height="${H-T-B}"/>
+    </svg>`;
+    const svg = host.querySelector('svg'), xh = svg.querySelector('.xh'), hv = svg.querySelector('.hov');
+    const at = ev=>{
+      const r = svg.getBoundingClientRect();
+      const vx = (ev.clientX - r.left) / Math.max(1, r.width) * W;
+      const i = Math.max(0, Math.min(n-1, Math.round((vx - L) / step)));
+      const p = pts[i];
+      xh.setAttribute('x1', X(i)); xh.setAttribute('x2', X(i)); xh.style.display = '';
+      hv.setAttribute('cx', X(i)); hv.setAttribute('cy', Y(p.wpm)); hv.style.display = '';
+      showTip(`<b>${p.wpm} WPM</b> · ${p.acc}% accuracy<br>${new Date(p.t).toLocaleDateString(undefined, { month:'short', day:'numeric' })} · ${p.m === 'free' ? 'Free Mode' : 'Learn Mode'}`, ev.clientX, ev.clientY);
+    };
+    svg.addEventListener('pointermove', at);
+    svg.addEventListener('pointerdown', at);
+    svg.addEventListener('pointerleave', ()=>{ xh.style.display = 'none'; hv.style.display = 'none'; hideTip(); });
+  }
+
+  function drawActivityChart(host, daily){
+    const W=360, H=134, L=30, R=6, T=16, B=20, n=STAT_DAYS;
+    const days = [];
+    for(let i=n-1; i>=0; i--){ const k = keyForOffset(i); days.push(Object.assign({ key:k, r:0, w:0, s:0 }, daily[k] || {})); }
+    const mins = days.map(d=>d.s/60);
+    const maxMin = Math.max.apply(null, mins);
+    const maxV = niceCeil(maxMin, [5,10,15,20,30,45,60,90,120,180]);
+    const slot = (W-L-R)/n, bw = Math.min(18, slot-4);
+    const Y = v => T + (1 - v/maxV)*(H-T-B), base = Y(0);
+    let grid = '';
+    [0, maxV/2, maxV].forEach(v=>{
+      grid += `<line class="grid" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="ax" x="${L-6}" y="${Y(v)+3}" text-anchor="end">${v}</text>`;
+    });
+    const topIdx = maxMin > 0 ? mins.indexOf(maxMin) : -1;
+    let bars = '', labels = '';
+    days.forEach((d,i)=>{
+      const x0 = L + i*slot + (slot-bw)/2;
+      const h = mins[i]/maxV*(H-T-B);
+      const tip = d.r
+        ? `<b>${prettyDay(d.key)}</b><br>${fmtMinutes(d.s)} · ${d.r} run${d.r === 1 ? '' : 's'} · ${d.w} words`
+        : `<b>${prettyDay(d.key)}</b><br>No play`;
+      let bar = '';
+      if(h > 0.5){
+        const hh = Math.max(h, 2), r = Math.min(4, hh, bw/2), y = base - hh;
+        // 4px rounded top, square at the baseline
+        bar = `<path class="bar${i === n-1 ? ' today' : ''}" d="M${x0},${base} V${y+r} Q${x0},${y} ${x0+r},${y} H${x0+bw-r} Q${x0+bw},${y} ${x0+bw},${y+r} V${base} Z"/>`;
+      }
+      bars += `<g class="bw" data-tip="${escapeHtml(tip)}"><rect class="hit" x="${L+i*slot}" y="${T}" width="${slot}" height="${H-T-B}"/>${bar}</g>`;
+      labels += `<text class="ax" x="${x0+bw/2}" y="${H-6}" text-anchor="middle">${new Date(d.key + 'T12:00:00').toLocaleDateString(undefined, { weekday:'narrow' })}</text>`;
+      if(i === topIdx){
+        // keep the label clear of the y-axis numbers on the left and the edge on the right
+        const anchor = i < 2 ? 'start' : (i > n-3 ? 'end' : 'middle');
+        const lx = anchor === 'start' ? x0 : (anchor === 'end' ? x0+bw : x0+bw/2);
+        labels += `<text class="tv" x="${lx}" y="${Math.max(10, base - h - 5)}" text-anchor="${anchor}">${fmtMinutes(d.s)}</text>`;
+      }
+    });
+    host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Minutes played per day over the last ${n} days">${grid}${bars}${labels}</svg>`;
+    wireTips(host);
+  }
+
+  function drawHeatmap(host, daily, st){
+    const cell=22, gap=5, L=16, weeks=HEAT_WEEKS;
+    const now = new Date(); now.setHours(12,0,0,0);
+    const dow = (now.getDay() + 6) % 7;                          // Monday = 0
+    const start = new Date(now); start.setDate(start.getDate() - dow - (weeks-1)*7);
+    const W = L + weeks*(cell+gap) - gap, H = 7*(cell+gap) - gap;
+    const cells = [];
+    let maxW = 0, played = 0, windowDays = 0;
+    for(let c=0; c<weeks; c++){ for(let r=0; r<7; r++){
+      const d = new Date(start); d.setDate(start.getDate() + c*7 + r);
+      if(d > now) continue;
+      const key = keyFromDate(d), e = daily[key] || {};
+      windowDays++;
+      if(e.r) played++;
+      if((e.w||0) > maxW) maxW = e.w;
+      cells.push({ c, r, key, w:e.w||0, runs:e.r||0, today: key === keyFromDate(now) });
+    } }
+    let svg = ['M','','W','','F','','S'].map((t,r)=> t ? `<text class="ax" x="0" y="${r*(cell+gap)+cell/2+3}">${t}</text>` : '').join('');
+    cells.forEach(x=>{
+      const lvl = x.w === 0 ? 0 : Math.max(1, Math.ceil(x.w / Math.max(1, maxW) * 4));
+      const tip = x.runs ? `<b>${prettyDay(x.key)}</b><br>${x.w} words · ${x.runs} run${x.runs === 1 ? '' : 's'}` : `<b>${prettyDay(x.key)}</b><br>No play`;
+      svg += `<rect class="cell lv${lvl}${x.today ? ' now' : ''}" x="${L + x.c*(cell+gap)}" y="${x.r*(cell+gap)}" width="${cell}" height="${cell}" rx="5" data-tip="${escapeHtml(tip)}"/>`;
+    });
+    const alive = st.lastPlayDay && dayDiff(st.lastPlayDay, todayKey()) <= 1;
+    host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Days you played in the last ${weeks} weeks. You played on ${played} of ${windowDays} days.">${svg}</svg>
+      <div class="st-streak"><b>${alive ? st.dayStreak : 0}</b> day streak 🔥
+        <span>Longest: ${st.longestDayStreak} · Played ${played} of the last ${windowDays} days</span>
+        <div class="st-legend">Less <i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i> More</div>
+      </div>`;
+    wireTips(host);
+  }
+
+  function renderStatsScreen(){
     const st = save.stats || defaultStats();
+    const daily = st.daily || {};
     const keys = st.keysCorrect + st.keysWrong;
-    const set = (id, v)=>{ const el = document.getElementById(id); if(el) el.textContent = v; };
-    set('stRuns', st.runs);
-    set('stWords', st.words.toLocaleString());
-    set('stAccuracy', keys > 0 ? Math.round(st.keysCorrect / keys * 100) + '%' : '–');
-    // standard WPM definition: 5 characters = 1 word, over time actually spent in runs
-    set('stWpm', st.playSeconds >= 10 ? Math.round((st.keysCorrect / 5) / (st.playSeconds / 60)) : '–');
-    set('stCombo', st.bestCombo);
-    set('stSps', st.bestStepsPerSec > 0 ? st.bestStepsPerSec.toFixed(2) : '–');
-    set('stLevels', Object.keys(save.completedLevels || {}).length);
-    set('stTime', formatDuration(st.playSeconds));
-    // a streak only counts if you played today or yesterday — otherwise it has lapsed
-    const today = todayKey();
-    const alive = st.lastPlayDay && dayDiff(st.lastPlayDay, today) <= 1;
-    set('stStreak', alive ? st.dayStreak : 0);
-    set('stLongest', st.longestDayStreak);
-    set('stSince', 'Tracking since ' + new Date(st.firstPlayed).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }));
+    const acc = keys > 0 ? Math.round(st.keysCorrect / keys * 100) : null;
+    // standard WPM definition: 5 characters = 1 word, over the time actually spent in runs
+    const wpm = st.playSeconds >= 10 ? Math.round((st.keysCorrect / 5) / (st.playSeconds / 60)) : null;
+    const alive = st.lastPlayDay && dayDiff(st.lastPlayDay, todayKey()) <= 1;
+    const pts = (st.recent || []).filter(r=>r && r.wpm > 0);
+    const bestWpm = pts.length ? Math.max.apply(null, pts.map(p=>p.wpm)) : null;
+    document.getElementById('stSince').textContent = 'Tracking since ' + new Date(st.firstPlayed).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+    const rows = pts.slice(-10).reverse().map(p=>
+      `<tr><td>${new Date(p.t).toLocaleDateString(undefined, { month:'short', day:'numeric' })}</td><td>${p.m === 'free' ? 'Free' : 'Learn'}</td><td>${p.wpm}</td><td>${p.acc}%</td><td>${p.m === 'free' ? p.sc : '–'}</td></tr>`).join('');
+    document.getElementById('statsBody').innerHTML = `
+      <div class="st-tiles">
+        <div class="st-tile"><div class="lbl">Avg speed</div><div class="val">${wpm === null ? '–' : wpm}<small>WPM</small></div></div>
+        <div class="st-tile"><div class="lbl">Accuracy</div><div class="val">${acc === null ? '–' : acc + '%'}</div><div class="st-meter"><i style="width:${acc || 0}%"></i></div></div>
+        <div class="st-tile"><div class="lbl">Day streak</div><div class="val">${alive ? st.dayStreak : 0}<small>🔥</small></div></div>
+      </div>
+      <div class="st-mini">
+        <div class="st-tile"><div class="lbl">Runs played</div><div class="val">${st.runs.toLocaleString()}</div></div>
+        <div class="st-tile"><div class="lbl">Words typed</div><div class="val">${st.words.toLocaleString()}</div></div>
+        <div class="st-tile"><div class="lbl">Time played</div><div class="val">${formatDuration(st.playSeconds)}</div></div>
+        <div class="st-tile"><div class="lbl">Best combo</div><div class="val">${st.bestCombo}</div></div>
+        <div class="st-tile"><div class="lbl">Best steps/s</div><div class="val">${st.bestStepsPerSec > 0 ? st.bestStepsPerSec.toFixed(2) : '–'}</div></div>
+        <div class="st-tile"><div class="lbl">Levels cleared</div><div class="val">${Object.keys(save.completedLevels || {}).length}</div></div>
+      </div>
+      <section class="st-card"><h3>Speed</h3>
+        <p class="hint">Words per minute, your last ${pts.length} run${pts.length === 1 ? '' : 's'}${bestWpm ? ' · best ' + bestWpm : ''}</p>
+        <div class="st-chart" id="chSpeed"></div></section>
+      <section class="st-card"><h3>Activity</h3>
+        <p class="hint">Minutes played per day, last ${STAT_DAYS} days · today in amber</p>
+        <div class="st-chart" id="chActivity"></div></section>
+      <section class="st-card"><h3>Consistency</h3>
+        <p class="hint">Each square is a day · brighter means more words typed</p>
+        <div class="st-chart st-heat" id="chHeat"></div></section>
+      <details class="st-card st-table"><summary>View recent runs as a table</summary>
+        ${rows ? `<table><thead><tr><th>Date</th><th>Mode</th><th>WPM</th><th>Acc.</th><th>Steps</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="hint">No runs recorded yet.</p>'}
+      </details>`;
+    drawSpeedChart(document.getElementById('chSpeed'), pts);
+    drawActivityChart(document.getElementById('chActivity'), daily);
+    drawHeatmap(document.getElementById('chHeat'), daily, st);
   }
 
   function refreshAccountScreen(){
-    renderStats();
     const skin = CHAR_SKINS.find(s=>s.id===save.equippedCharSkin) || CHAR_SKINS[0];
     avatarCircle.style.background = skin.torso;
     avatarCircle.textContent = displayName().charAt(0).toUpperCase() || '?';
@@ -2678,6 +2929,20 @@
   });
   document.getElementById('accountBackBtn').addEventListener('click', ()=>{
     accountScreen.classList.add('hidden');
+    refreshMenu();
+    mainMenu.classList.remove('hidden');
+  });
+  const statsScreen = document.getElementById('statsScreen');
+  document.getElementById('menuStatsBtn').addEventListener('click', ()=>{
+    stopRunIfActive();
+    mainMenu.classList.add('hidden');
+    renderStatsScreen();
+    statsScreen.classList.remove('hidden');
+    track('stats_open');
+  });
+  document.getElementById('statsBackBtn').addEventListener('click', ()=>{
+    hideTip();
+    statsScreen.classList.add('hidden');
     refreshMenu();
     mainMenu.classList.remove('hidden');
   });
