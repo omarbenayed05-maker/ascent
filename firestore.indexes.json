@@ -1,0 +1,14 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "leaderboard",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "language", "order": "ASCENDING" },
+        { "fieldPath": "score", "order": "DESCENDING" },
+        { "fieldPath": "stepsPerSecond", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,2700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASCENT — Type to Climb</title>
+<meta name="description" content="A competitive typing game: type the word to climb the stairs. Chain combos, climb the leaderboard and challenge your friends.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ASCENT — Type to Climb">
+<meta property="og:description" content="Type the word, climb the stairs, don't fall. Can you beat my score?">
+<meta name="twitter:card" content="summary">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap');
+  :root{
+    --bg-deep:#0a0d16; --bg-mid:#131829;
+    --tread:#2a3350; --tread-edge:#3a4568; --riser:#141a2c; --riser-edge:#1d2440;
+    --panel-bg:#232a40; --panel-border:#343e5c;
+    --glow:#3effb2; --glow-dim:rgba(62,255,178,0.35);
+    --amber:#ffb84d; --danger:#ff5c5c; --coin:#ffd15c;
+    --text:#e8eaf2; --text-dim:#6d7690;
+    --mono:'JetBrains Mono','IBM Plex Mono',ui-monospace,monospace;
+    --sans:'Space Grotesk','Inter',-apple-system,sans-serif;
+    --display:'Quicksand','Space Grotesk',-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{ width:100%;height:100%; background:radial-gradient(ellipse at 50% 8%, var(--bg-mid), var(--bg-deep) 72%); color:var(--text); font-family:var(--sans); overflow:hidden; user-select:none; }
+  #app{ position:relative; width:100vw; height:100vh; display:flex; flex-direction:column; align-items:center; transition: background 0.8s ease; }
+
+  #hud{ width:100%; max-width:920px; display:flex; justify-content:space-between; align-items:center; padding:16px 24px 0 24px; z-index:30; gap:10px; }
+  #hud .left{ display:flex; align-items:center; gap:12px; }
+  #hud .brand{ font-family:var(--display); font-size:15px; font-weight:600; letter-spacing:0.1em; color:var(--text-dim); text-transform:uppercase; cursor:pointer; }
+  #hud .brand span{ color:var(--glow); }
+  #playerBadge{ display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11px; color:var(--text-dim); cursor:default; }
+  #playerBadge b{ color:var(--amber); }
+  #coinsTag{ display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:12px; color:var(--coin); }
+  #hudActions{ display:flex; align-items:center; gap:10px; transition:opacity 0.2s; }
+  #hud.in-game #hudActions{ display:none; }
+  #shopBtn, #authBtn, #leaderboardBtn{ font-family:var(--mono); font-size:11px; letter-spacing:0.08em; color:var(--text); background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:6px; padding:6px 10px; cursor:pointer; }
+  #authBtn{ display:flex; align-items:center; gap:6px; }
+  #authBtn .authAvatar{ width:16px; height:16px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 1px rgba(255,255,255,0.2) inset; }
+  .leaderboard-list{ display:flex; flex-direction:column; gap:6px; margin-top:4px; width:320px; max-height:44vh; overflow-y:auto; }
+  .leaderboard-row{ display:flex; justify-content:space-between; align-items:center; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:8px; padding:9px 12px; font-family:var(--mono); font-size:12px; }
+  .leaderboard-row .rank{ color:var(--amber); width:26px; }
+  .leaderboard-row .name{ flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .leaderboard-row .val{ color:var(--glow); white-space:nowrap; font-size:11px; }
+  #hearts{ display:flex; gap:6px; font-size:17px; }
+  #score{ font-family:var(--mono); font-size:11px; color:var(--text-dim); text-align:right; letter-spacing:0.05em; }
+  #score b{ font-size:19px; display:block; color:var(--amber); }
+  #bestTag{ font-size:10px; color:var(--text-dim); }
+  #modeTag{ font-family:var(--mono); font-size:10px; color:var(--text-dim); letter-spacing:0.1em; }
+
+  #wordZone{ position:relative; width:100%; max-width:640px; padding:10px 20px 4px 20px; text-align:center; z-index:25; }
+  #wordBanner{ position:relative; z-index:1; display:inline-block; font-family:var(--mono); font-size:36px; letter-spacing:0.05em; min-height:48px; transition:text-shadow 0.25s; }
+  #wordBanner .char-correct{ color:var(--glow); }
+  #wordBanner .char-cursor{ border-bottom:3px solid var(--amber); }
+  #wordBanner.flame-t2{ text-shadow:0 0 14px #5fc9ffcc; }
+  #wordBanner.flame-t2 .char-correct{ color:#bfe9ff; }
+  #wordBanner.flame-t3{ text-shadow:0 0 14px #c58cffcc; }
+  #wordBanner.flame-t3 .char-correct{ color:#e2c9ff; }
+  #wordBanner.flame-t4{ text-shadow:0 0 14px #ffb84dcc; }
+  #wordBanner.flame-t4 .char-correct{ color:#ffe0a3; }
+
+  /* one tall, single-looking flame built from a few stacked layers (glow behind, sharp core in front) */
+  /* a real glowing fire halo that hugs the word — sized to the word's own width in JS,
+     not a row/stack of floating flame icons above it */
+  #flameFx{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(1,1); border-radius:50%;
+    background: radial-gradient(ellipse at center, rgba(255,150,40,0.65), rgba(255,90,20,0.3) 55%, transparent 78%);
+    filter: blur(15px); opacity:0; pointer-events:none; transition:opacity 0.3s, background 0.3s; z-index:0;
+    animation-name: fire-pulse; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-duration:0.85s; }
+  #flameFx.show{ opacity:1; }
+  @keyframes fire-pulse{
+    0%,100%{ transform: translate(-50%,-50%) scale(1,1); }
+    50%{ transform: translate(-50%,-50%) scale(1.1,0.9); }
+  }
+  #flameFx.flame-t2{ background: radial-gradient(ellipse at center, rgba(95,201,255,0.65), rgba(60,150,255,0.28) 55%, transparent 78%); }
+  #flameFx.flame-t3{ background: radial-gradient(ellipse at center, rgba(197,140,255,0.65), rgba(140,80,255,0.28) 55%, transparent 78%); }
+  #flameFx.flame-t4{ background: radial-gradient(ellipse at center, rgba(255,184,77,0.7), rgba(255,120,30,0.3) 55%, transparent 78%); }
+  #wordTranslation{ font-family:var(--mono); font-size:14px; color:var(--text-dim); letter-spacing:0.02em; min-height:16px; margin-top:2px; opacity:0.85; }
+  #comboTag{ font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.05em; height:16px; margin-top:4px; opacity:0; transition:opacity 0.2s, color 0.3s; }
+  #wordTimerTrack{ position:relative; margin:12px auto 0 auto; width:70%; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
+  #wordTimerFill{ height:100%; width:100%; background:linear-gradient(90deg,var(--glow),var(--amber)); transform-origin:left; }
+  #ghostMarker{ position:absolute; top:-3px; bottom:-3px; width:2px; background:rgba(255,255,255,0.6); box-shadow:0 0 5px 1px rgba(255,255,255,0.5); opacity:0; transition:opacity 0.2s, left 0.15s linear; pointer-events:none; z-index:2; }
+
+  /* ---- screen-edge pulse — a soft vignette glow that shifts color with combo tier ---- */
+  #edgePulse{ position:fixed; inset:0; z-index:150; pointer-events:none; opacity:0;
+    box-shadow: inset 0 0 0 0 transparent; transition:opacity 0.35s, box-shadow 0.35s;
+    animation-name: edge-pulse; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-duration:0.85s; }
+  #edgePulse.show{ opacity:1; }
+  #edgePulse.flame-t2{ box-shadow: inset 0 0 100px 6px rgba(95,201,255,0.28); }
+  #edgePulse.flame-t3{ box-shadow: inset 0 0 100px 6px rgba(197,140,255,0.3); }
+  #edgePulse.flame-t4{ box-shadow: inset 0 0 120px 10px rgba(255,184,77,0.32); }
+  @keyframes edge-pulse{ 0%,100%{ opacity:0.55; } 50%{ opacity:1; } }
+
+  /* flat 2D/SVG stage — no CSS 3D, so no depth-sorting ambiguity */
+  #stage{ position:relative; flex:1; width:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  #stairScene{ position:relative; width:560px; height:460px; transition: transform 0.15s ease-out; transform-style:flat; }
+  #stairSvg{ position:absolute; inset:0; width:100%; height:100%; }
+  #climber{ position:absolute; width:50px; height:80px; margin-left:-25px; margin-top:-72px; transition:none; z-index:6; }
+  #climber .head{ position:absolute; top:0; left:50%; width:23px; height:23px; margin-left:-11.5px; border-radius:50%; z-index:3; box-shadow: inset -3px -3px 5px rgba(0,0,0,0.28), inset 2px 3px 4px rgba(255,255,255,0.4); }
+  #climber .torso{ position:absolute; top:19px; left:50%; width:27px; height:34px; margin-left:-13.5px; border-radius:11px 11px 7px 7px; z-index:2; box-shadow: inset -5px 0 8px rgba(0,0,0,0.22), inset 4px 0 6px rgba(255,255,255,0.18); }
+  #climber .torso::after{ content:''; position:absolute; left:2px; right:2px; bottom:9px; height:2px; border-radius:2px; background:rgba(0,0,0,0.16); }
+  #climber .legL, #climber .legR{ position:absolute; top:45px; width:9px; height:27px; border-radius:4px 4px 6px 6px; transform-origin:top center; z-index:1; box-shadow: inset -2px 0 3px rgba(0,0,0,0.18), inset 0 -7px 5px -3px rgba(0,0,0,0.3); }
+  #climber .legL{ left:14.5px; } #climber .legR{ left:26.5px; }
+
+  #climber.stepping .legL{ animation: legL-step 0.32s cubic-bezier(.45,0,.55,1); }
+  #climber.stepping .legR{ animation: legR-step 0.32s cubic-bezier(.45,0,.55,1); }
+  #climber.stepping .torso{ animation: torso-bob 0.32s cubic-bezier(.45,0,.55,1); }
+  #climber.stepping .head{ animation: head-bob 0.32s cubic-bezier(.45,0,.55,1); }
+  @keyframes legL-step{
+    0%{ transform:rotate(0deg); }
+    22%{ transform:rotate(12deg); }
+    58%{ transform:rotate(-18deg); }
+    85%{ transform:rotate(-4deg); }
+    100%{ transform:rotate(0deg); }
+  }
+  @keyframes legR-step{
+    0%{ transform:rotate(0deg); }
+    22%{ transform:rotate(-12deg); }
+    58%{ transform:rotate(18deg); }
+    85%{ transform:rotate(4deg); }
+    100%{ transform:rotate(0deg); }
+  }
+  @keyframes torso-bob{
+    0%{ transform:translateY(0) rotate(0deg); }
+    30%{ transform:translateY(1px) rotate(1deg); }
+    58%{ transform:translateY(-6px) rotate(-3deg); }
+    100%{ transform:translateY(0) rotate(0deg); }
+  }
+  @keyframes head-bob{
+    0%{ transform:translateY(0); }
+    58%{ transform:translateY(-5px); }
+    100%{ transform:translateY(0); }
+  }
+  #climber.idle .legL, #climber.idle .legR{ animation: idle-sway 2.2s ease-in-out infinite; }
+  @keyframes idle-sway{ 0%,100%{transform:rotate(0deg);} 50%{transform:rotate(3deg);} }
+
+  /* run resolution: a solid landing bounce on clearing a level, a real fall (not a freeze) on losing */
+  #climber.landed{ animation: climber-land 0.42s ease-out; }
+  @keyframes climber-land{
+    0%{ transform: scaleY(1) translateY(0); }
+    35%{ transform: scaleY(0.82) translateY(6px); }
+    70%{ transform: scaleY(1.06) translateY(-3px); }
+    100%{ transform: scaleY(1) translateY(0); }
+  }
+  #climber.falling{ animation: climber-fall 0.6s cubic-bezier(.55,0,.85,.35) forwards; }
+  @keyframes climber-fall{
+    0%{ transform: translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform: translateY(160px) rotate(65deg); opacity:0; }
+  }
+
+  .aura{ position:absolute; border-radius:50%; background:radial-gradient(circle,var(--glow-dim),transparent 70%); pointer-events:none; animation:aura-burst 0.55s ease-out forwards; }
+  @keyframes aura-burst{ 0%{transform:scale(0.3);opacity:1;} 100%{transform:scale(11);opacity:0;} }
+  .shake{ animation:shake-anim 0.3s; }
+  @keyframes shake-anim{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-10px);} 75%{transform:translateX(10px);} }
+
+  #prompt{ padding:6px 0 18px 0; text-align:center; font-family:var(--mono); font-size:11px; color:var(--text-dim); letter-spacing:0.05em; }
+
+  #rewardToast{ position:fixed; top:14px; left:50%; transform:translateX(-50%) scale(1,1); background:var(--panel-bg); border:1px solid var(--glow); color:var(--text); font-family:var(--mono); font-size:12px; padding:10px 16px; border-radius:8px; z-index:200; opacity:0; transition:opacity 0.4s; pointer-events:none; white-space:pre-line; text-align:center; max-width:80vw; }
+  #rewardToast.show{ opacity:1; animation: toast-pop 0.5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes toast-pop{
+    0%{ transform:translateX(-50%) scale(0.65,1.35); }
+    45%{ transform:translateX(-50%) scale(1.18,0.85); }
+    72%{ transform:translateX(-50%) scale(0.94,1.06); }
+    100%{ transform:translateX(-50%) scale(1,1); }
+  }
+
+  .overlay{ position:absolute; inset:0; background:var(--bg-deep); display:flex; flex-direction:column; align-items:center; justify-content:center; justify-content:safe center; z-index:50; text-align:center; gap:12px; padding:20px; overflow-y:auto; }
+  .overlay h1{ font-family:var(--display); font-weight:600; font-size:32px; letter-spacing:0.02em; }
+  .overlay h1 span{ color:var(--glow); font-weight:600; }
+  .overlay p{ color:var(--text-dim); font-size:13px; max-width:420px; line-height:1.6; font-family:var(--sans); }
+  .final-score{ font-family:var(--mono); font-size:44px; color:var(--amber); }
+  .menu-row{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-top:6px; }
+  button.cta{ padding:13px 28px; background:var(--glow); color:#0a0d16; border:none; border-radius:8px; font-family:var(--mono); font-weight:700; font-size:13px; letter-spacing:0.05em; cursor:pointer; transition:transform 0.15s; }
+  button.cta.secondary{ background:transparent; color:var(--text); border:1px solid var(--panel-border); }
+  button.cta.locked{ background:#232a3d; color:var(--text-dim); cursor:not-allowed; }
+  button.cta:hover{ transform:translateY(-2px); }
+  .level-list{ display:flex; flex-direction:column; gap:9px; margin-top:4px; width:320px; max-height:44vh; overflow-y:auto; padding-right:4px; }
+  .world-header{ font-family:var(--mono); font-size:11px; letter-spacing:0.14em; color:var(--glow); margin-top:12px; text-transform:uppercase; text-align:left; }
+  .world-header:first-child{ margin-top:0; }
+  .level-btn{ background:var(--panel-bg); border:1px solid var(--panel-border); color:var(--text); padding:12px 14px; border-radius:8px; font-family:var(--mono); font-size:13px; text-align:left; cursor:pointer; transition:border-color 0.15s; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .level-btn:hover{ border-color:var(--glow); }
+  .level-btn.locked{ opacity:0.4; cursor:not-allowed; }
+  .level-btn small{ display:block; color:var(--text-dim); font-size:10px; margin-top:3px; }
+  .level-stars{ font-size:13px; color:var(--amber); white-space:nowrap; }
+  .hidden{ display:none !important; }
+
+  .gauge-wrap{ display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .gauge-label{ font-family:var(--mono); font-size:11px; color:var(--text-dim); letter-spacing:0.08em; }
+  .menu-hud{ display:flex; gap:16px; align-items:center; justify-content:center; font-family:var(--mono); font-size:12px; color:var(--text-dim); margin-top:-2px; flex-wrap:wrap; }
+  .menu-hud-item{ display:flex; align-items:center; gap:5px; }
+  button.cta.small{ padding:7px 16px; font-size:11px; }
+
+  .shop-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; width:360px; max-height:40vh; overflow-y:auto; margin-top:4px; }
+  .shop-item{ background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:6px; align-items:center; }
+  .shop-swatch{ width:100%; height:34px; border-radius:6px; }
+  .shop-item .name{ font-family:var(--mono); font-size:11px; }
+  .shop-item button{ font-family:var(--mono); font-size:10px; padding:6px 8px; border-radius:5px; border:1px solid var(--panel-border); background:transparent; color:var(--text); cursor:pointer; }
+  .shop-item button.equipped{ background:var(--glow); color:#0a0d16; border-color:var(--glow); }
+  .shop-item button.buy{ background:var(--coin); color:#3a2c00; border-color:var(--coin); }
+  .shop-item button.buy-gem{ background:#b98cff; color:#1e0e33; border-color:#b98cff; }
+  .shop-item button.locked-reward{ background:transparent; color:var(--text); border-style:dashed; cursor:not-allowed; }
+  .shop-item .unlock-note{ font-family:var(--mono); font-size:9.5px; color:var(--amber); line-height:1.3; }
+  .shop-divider{ grid-column:1 / -1; font-family:var(--mono); font-size:11px; letter-spacing:0.1em; color:var(--glow); text-transform:uppercase; margin-top:8px; text-align:left; }
+  .shop-tabs{ display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; justify-content:center; }
+  .shop-tab{ font-family:var(--mono); font-size:11px; padding:6px 14px; border-radius:6px; border:1px solid var(--panel-border); cursor:pointer; color:var(--text-dim); }
+  .shop-tab.active{ color:var(--glow); border-color:var(--glow); }
+
+  .profile-card{ display:flex; align-items:center; gap:14px; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:14px; padding:16px 18px; width:340px; }
+  .avatar-circle{ width:58px; height:58px; border-radius:50%; flex-shrink:0; box-shadow: inset -4px -4px 8px rgba(0,0,0,0.3), inset 3px 3px 6px rgba(255,255,255,0.25), 0 0 0 2px var(--panel-border); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:700; font-size:20px; color:#0a0d16; }
+  .profile-info{ flex:1; text-align:left; min-width:0; }
+  .nickname-row{ display:flex; gap:6px; align-items:center; }
+  .nickname-input{ flex:1; min-width:0; background:var(--bg-deep); border:1px solid var(--panel-border); border-radius:6px; padding:9px 10px; font-family:var(--sans); font-weight:600; font-size:14px; color:var(--text); }
+  .nickname-input:focus{ outline:none; border-color:var(--glow); }
+  .profile-sub{ font-family:var(--mono); font-size:10.5px; color:var(--text-dim); margin-top:7px; line-height:1.5; }
+  .stats-card{ width:340px; max-width:100%; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:14px; padding:14px 16px; text-align:left; }
+  .stats-card h2{ font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:0.12em; color:var(--glow); margin-bottom:10px; text-transform:uppercase; }
+  .stats-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; }
+  .stat-item b{ display:block; font-family:var(--mono); font-size:17px; color:var(--text); font-weight:700; }
+  .stat-item span{ font-family:var(--sans); font-size:10.5px; color:var(--text-dim); letter-spacing:0.03em; }
+  .challenge-banner{ width:340px; max-width:100%; background:var(--panel-bg); border:1px solid var(--amber); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:10px; justify-content:space-between; text-align:left; font-family:var(--sans); font-size:12.5px; line-height:1.4; }
+  .stats-since{ font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:12px; }
+  .toggle-row{ display:flex; align-items:center; gap:12px; width:340px; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:12px; padding:13px 15px; text-align:left; }
+  .toggle-label{ flex:1; }
+  .toggle-label b{ display:block; font-size:12px; font-family:var(--sans); }
+  .toggle-label small{ display:block; font-size:10px; color:var(--text-dim); margin-top:3px; line-height:1.4; }
+  .toggle-switch{ position:relative; width:42px; height:24px; flex-shrink:0; }
+  .toggle-switch input{ opacity:0; width:0; height:0; position:absolute; }
+  .toggle-slider{ position:absolute; inset:0; background:#2a3350; border-radius:24px; cursor:pointer; transition:background 0.2s; }
+  .toggle-slider::before{ content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#e8eaf2; border-radius:50%; transition:transform 0.2s; }
+  .toggle-switch input:checked + .toggle-slider{ background:var(--glow); }
+  .toggle-switch input:checked + .toggle-slider::before{ transform:translateX(18px); background:#0a0d16; }
+  .toggle-switch input:disabled + .toggle-slider{ opacity:0.4; cursor:not-allowed; }
+
+  #skyLayer{ position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; opacity:0; transition:opacity 0.6s; }
+  body.theme-sky #hud, body.theme-sky #wordZone, body.theme-sky #prompt{ --text:#233246; --text-dim:#3f5570; }
+  body.theme-sky #skyLayer{ opacity:1; }
+  body.theme-sky #app{ background: linear-gradient(180deg, #4f86b8 0%, #7fabd2 45%, #aecde5 100%); }
+  body.theme-sky #stairSvg{ position:relative; z-index:1; }
+  body.theme-sky #climber{ z-index:6; }
+  .cloud{
+    position:absolute; background:#fff; border-radius:50%; opacity:0.75;
+    box-shadow: 0 0 0 10px rgba(255,255,255,0.32), 18px 5px 0 5px rgba(255,255,255,0.42), -18px 5px 0 5px rgba(255,255,255,0.42);
+    animation-name: drift-cloud; animation-timing-function:linear; animation-iteration-count:infinite;
+  }
+  @keyframes drift-cloud{ from{ transform:translateX(0); } to{ transform:translateX(-140vw); } }
+  .skywave{
+    position:absolute; left:-20%; width:140%; height:14px;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,0.6) 0 24px, transparent 24px 48px);
+    border-radius:50%;
+    animation-name: drift-wave; animation-timing-function:linear; animation-iteration-count:infinite;
+  }
+  @keyframes drift-wave{ from{ transform:translateX(0); } to{ transform:translateX(60px); } }
+
+  body.theme-dusk #skyLayer{ opacity:1; }
+  body.theme-dusk #app{ background: linear-gradient(180deg, #3d1f3a 0%, #7a3450 38%, #c15c4f 70%, #f2a45c 100%); }
+  .spark{ position:absolute; border-radius:50%; background:#ffdca0; box-shadow:0 0 6px 1px rgba(255,180,90,0.6);
+    animation-name: twinkle; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+
+  body.theme-aurora #skyLayer{ opacity:1; }
+  body.theme-aurora #app{ background: radial-gradient(ellipse at 50% -10%, #2b1f4d 0%, #14102a 45%, #0a0d16 85%); }
+  .star{ animation-name: twinkle; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+  @keyframes twinkle{ 0%,100%{ opacity:0.15; } 50%{ opacity:1; } }
+  .ribbon{ position:absolute; left:-10%; width:120%; height:70px; border-radius:50%; filter:blur(10px); opacity:0.25; animation-name:drift-ribbon; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+  @keyframes drift-ribbon{ 0%,100%{ transform:translateX(0) scaleY(1); } 50%{ transform:translateX(4%) scaleY(1.3); } }
+
+  body.theme-aetherial #skyLayer{ opacity:1; }
+  body.theme-aetherial #app{ background: linear-gradient(180deg, #ff9d6c 0%, #ffb27a 22%, #f7c98c 42%, #cfa9c9 62%, #7f7fb8 82%, #40406e 100%); }
+  body.theme-aetherial #stairSvg{ position:relative; z-index:1; }
+  body.theme-aetherial #climber{ z-index:6; }
+  .sun-orb{ position:absolute; left:50%; border-radius:50%; filter:blur(2px);
+    background: radial-gradient(circle, #fff6dd 0%, #ffd98a 45%, rgba(255,180,110,0.4) 72%, transparent 85%); }
+  .sun-rays{ position:absolute; left:50%; width:520px; height:520px; margin-left:-260px; margin-top:-260px;
+    background: conic-gradient(from 0deg,
+      rgba(255,246,221,0.22) 0deg 8deg, transparent 8deg 26deg,
+      rgba(255,246,221,0.16) 26deg 34deg, transparent 34deg 55deg,
+      rgba(255,246,221,0.20) 55deg 62deg, transparent 62deg 90deg,
+      rgba(255,246,221,0.14) 90deg 96deg, transparent 96deg 130deg,
+      rgba(255,246,221,0.20) 130deg 138deg, transparent 138deg 165deg,
+      rgba(255,246,221,0.16) 165deg 172deg, transparent 172deg 200deg,
+      rgba(255,246,221,0.20) 200deg 208deg, transparent 208deg 235deg,
+      rgba(255,246,221,0.15) 235deg 242deg, transparent 242deg 270deg,
+      rgba(255,246,221,0.20) 270deg 278deg, transparent 278deg 310deg,
+      rgba(255,246,221,0.16) 310deg 318deg, transparent 318deg 360deg);
+    filter: blur(3px); opacity:0.65; animation: rays-spin 90s linear infinite; }
+  @keyframes rays-spin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+  .aether-mote{ position:absolute; border-radius:50%; opacity:0;
+    background: radial-gradient(circle, #fff8e8, #ffcf8f 55%, transparent 78%);
+    box-shadow:0 0 8px 2px rgba(255,204,140,0.55);
+    animation-name: mote-rise; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+  @keyframes mote-rise{
+    0%{ transform:translateY(0) translateX(0); opacity:0; }
+    12%{ opacity:0.9; }
+    88%{ opacity:0.5; }
+    100%{ transform:translateY(-100vh) translateX(var(--drift,20px)); opacity:0; }
+  }
+  .a-cloud{ position:absolute; border-radius:50%; filter:blur(1px);
+    background: radial-gradient(ellipse at 40% 40%, rgba(255,255,255,0.95), rgba(255,235,215,0.55) 70%, transparent 85%);
+    animation-name: drift-cloud; animation-timing-function:linear; animation-iteration-count:infinite; }
+
+  /* ---- premium/reward skin shine — a soft pulsing halo behind the climber for skins
+     flagged "glow" (gem-shop items and rare unlock rewards), plus a matching glow on the
+     active stair tread for the shinier stair skins ---- */
+  #climber.shiny::before{ content:''; position:absolute; inset:-16px; border-radius:50%; z-index:-1;
+    background: radial-gradient(circle, var(--skin-glow, rgba(255,255,255,0.5)), transparent 70%);
+    filter: blur(9px); opacity:0.75; pointer-events:none;
+    animation: shiny-pulse 1.8s ease-in-out infinite; }
+  @keyframes shiny-pulse{ 0%,100%{ opacity:0.45; transform:scale(0.88); } 50%{ opacity:0.85; transform:scale(1.08); } }
+  #activeTread.shiny{ filter: drop-shadow(0 0 7px var(--glow)) drop-shadow(0 0 2px var(--glow)); }
+  .shop-swatch{ position:relative; overflow:hidden; box-shadow: inset 0 -6px 10px rgba(0,0,0,0.18), inset 0 3px 5px rgba(255,255,255,0.12); }
+  .shop-swatch.shine::after{ content:''; position:absolute; inset:0;
+    background:linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.65) 48%, transparent 70%);
+    background-size:220% 100%; animation: shine-sweep 2.4s ease-in-out infinite; }
+  @keyframes shine-sweep{ 0%{ background-position:160% 0; } 100%{ background-position:-60% 0; } }
+
+  /* ---- vignette + ambient embers behind the void backdrop, so idle screens aren't flat ---- */
+  #vignette{ position:absolute; inset:0; pointer-events:none; z-index:1;
+    background: radial-gradient(ellipse at 50% 30%, transparent 45%, rgba(0,0,0,0.55) 100%); }
+  .ember{ position:absolute; bottom:-10px; border-radius:50%; background:var(--glow); opacity:0;
+    box-shadow:0 0 6px 1px var(--glow-dim);
+    animation-name: ember-rise; animation-timing-function:ease-in; animation-iteration-count:infinite; }
+  @keyframes ember-rise{
+    0%{ transform:translateY(0) translateX(0); opacity:0; }
+    10%{ opacity:0.7; }
+    90%{ opacity:0.35; }
+    100%{ transform:translateY(-92vh) translateX(var(--drift,20px)); opacity:0; }
+  }
+
+  /* ---- trailing glow left behind the climber on each step, reads as motion energy ---- */
+  .step-trail{ position:absolute; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, var(--glow), transparent 70%);
+    animation:trail-fade 0.5s ease-out forwards; }
+  @keyframes trail-fade{ 0%{ opacity:0.55; transform:scale(1); } 100%{ opacity:0; transform:scale(0.3); } }
+
+  /* ---- desktop-only gate: this is a keyboard-typing game, so touch devices get steered to a PC ---- */
+  #mobileGate{ position:fixed; inset:0; background:radial-gradient(ellipse at 50% 15%, var(--bg-mid), var(--bg-deep) 75%);
+    z-index:500; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; gap:16px; }
+  #mobileGate.show{ display:flex; }
+  #mobileGate .gateIcon{ font-size:44px; }
+  #mobileGate h1{ font-family:var(--display); font-weight:600; font-size:26px; }
+  #mobileGate h1 span{ color:var(--glow); }
+  #mobileGate p{ color:var(--text-dim); font-size:13px; max-width:360px; line-height:1.7; font-family:var(--sans); }
+  #mobileGate .kbdHint{ font-family:var(--mono); font-size:11px; color:var(--text-dim); border:1px solid var(--panel-border); border-radius:8px; padding:10px 14px; background:var(--panel-bg); max-width:340px; line-height:1.6; }
+
+  /* ---- revive prompt ---- */
+  #reviveScreen{ z-index:60; }
+  #reviveScreen .final-score{ font-size:30px; }
+  #giftInput{ width:280px; background:var(--bg-deep); border:1px solid var(--panel-border); border-radius:8px; padding:11px 12px; font-family:var(--mono); font-size:13px; color:var(--text); text-align:center; text-transform:lowercase; }
+  #giftInput:focus{ outline:none; border-color:var(--glow); }
+  #gemsTag{ display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:12px; color:#c9a8ff; }
+</style>
+</head>
+<body>
+<div id="edgePulse"></div>
+<div id="mobileGate">
+  <div class="gateIcon">⌨️</div>
+  <h1>ASC<span>ENT</span> is best on a keyboard</h1>
+  <p>This is a typing-speed game, and Free Mode is competitive — a touchscreen keyboard just can't type as fast as a real one, so it wouldn't be a fair race for the leaderboard. Please open this page on a desktop or laptop instead.</p>
+  <div class="kbdHint">Tip: if this device actually has a physical keyboard attached (e.g. a tablet in a keyboard case), you can continue anyway below.</div>
+  <button class="cta secondary small" id="mobileGateContinue" style="margin-top:4px;">CONTINUE ANYWAY</button>
+</div>
+
+<div id="app">
+
+  <div id="hud">
+    <div class="left">
+      <div class="brand" id="menuBtn">ASC<span>ENT</span></div>
+      <div id="playerBadge">LV <b id="playerLevelTag">1</b></div>
+      <div id="coinsTag">🪙<span id="coinsVal">0</span></div>
+      <div id="gemsTag">💎<span id="gemsVal">0</span></div>
+      <div id="hudActions">
+        <button id="shopBtn">SHOP</button>
+        <button id="authBtn"><span class="authAvatar" id="authAvatarDot"></span><span id="authBtnLabel">ACCOUNT</span></button>
+        <button id="leaderboardBtn">🏆</button>
+      </div>
+    </div>
+    <div id="hearts"></div>
+    <div id="score">
+      <span id="modeTag"></span>
+      <b id="scoreVal">0</b>
+      <div id="bestTag"></div>
+    </div>
+  </div>
+
+  <div id="wordZone">
+    <div id="flameFx"></div>
+    <div id="wordBanner"></div>
+    <div id="wordTranslation"></div>
+    <div id="comboTag"></div>
+    <div id="wordTimerTrack"><div id="wordTimerFill"></div><div id="ghostMarker"></div></div>
+  </div>
+
+  <div id="stage">
+    <div id="skyLayer"></div>
+    <div id="emberLayer" style="position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0;"></div>
+    <div id="vignette"></div>
+    <div id="stairScene">
+      <svg id="stairSvg" viewBox="0 0 560 460" preserveAspectRatio="xMidYMax meet"></svg>
+      <div id="climber">
+        <div class="head"></div>
+        <div class="torso"></div>
+        <div class="legL"></div>
+        <div class="legR"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="prompt">type the word above to climb</div>
+
+  <div id="mainMenu" class="overlay">
+    <h1>ASC<span>ENT</span></h1>
+    <div class="menu-hud">
+      <div class="menu-hud-item">🪙 <span id="menuCoins">0</span></div>
+      <div class="menu-hud-item">💎 <span id="menuGems">0</span></div>
+      <div class="menu-hud-item">🏆 Best <span id="menuBest">0</span></div>
+      <button class="cta secondary small" id="menuShopBtn">SHOP</button>
+      <button class="cta secondary small" id="menuGiftBtn">GIFTS</button>
+      <button class="cta secondary small" id="menuAuthBtn">SIGN IN</button>
+      <button class="cta secondary small" id="menuLeaderboardBtn">🏆 BOARD</button>
+    </div>
+    <div class="gauge-wrap" id="menuGaugeWrap"></div>
+    <p>Type the word above the stairs to climb higher. Miss a letter, or run out of time, and you fall. Chain words without missing to build a combo — big streaks earn bonus hearts, free revives, and rare skins.</p>
+    <div class="challenge-banner hidden" id="challengeBanner">
+      <span id="challengeText"></span>
+      <button class="cta small" id="challengeAcceptBtn">ACCEPT</button>
+    </div>
+    <div class="menu-row">
+      <button class="cta" id="freeModeBtn">FREE MODE 🏆</button>
+      <button class="cta secondary" id="learnModeBtn">LEARN MODE</button>
+    </div>
+    <p id="freeLockMsg" style="font-size:11px;"></p>
+    <p id="competitiveNote" style="font-size:11px; color:var(--amber);"></p>
+  </div>
+
+  <div id="levelSelect" class="overlay hidden">
+    <h1>LEARN <span>MODE</span></h1>
+    <p>Levels unlock one at a time, grouped into worlds that get harder as you climb. Stars are based on the hearts you finish with. Run out of hearts and you can pay coins to revive.</p>
+    <div class="level-list" id="levelListWrap"></div>
+    <button class="cta secondary" id="backToMenuBtn">BACK</button>
+  </div>
+
+  <div id="shopScreen" class="overlay hidden">
+    <h1>SH<span>OP</span></h1>
+    <div class="menu-hud">
+      <div class="menu-hud-item">🪙 <span id="coinsVal2">0</span></div>
+      <div class="menu-hud-item">💎 <span id="gemsVal2">0</span></div>
+    </div>
+    <div class="shop-tabs">
+      <div class="shop-tab active" id="tabCharacter">Character</div>
+      <div class="shop-tab" id="tabStairs">Stairs</div>
+      <div class="shop-tab" id="tabBackdrop">Theme</div>
+    </div>
+    <div class="shop-grid" id="shopGrid"></div>
+    <button class="cta secondary" id="shopBackBtn">BACK</button>
+  </div>
+
+  <div id="giftScreen" class="overlay hidden">
+    <h1>GIFT <span>CODES</span></h1>
+    <p>Got a code? Redeem it here for bonus skins and rewards.</p>
+    <input id="giftInput" placeholder="enter code" maxlength="24" autocomplete="off" />
+    <div class="menu-row">
+      <button class="cta" id="giftRedeemBtn">REDEEM</button>
+    </div>
+    <p id="giftStatusMsg" style="font-size:11px;"></p>
+    <button class="cta secondary" id="giftBackBtn">BACK</button>
+  </div>
+
+  <div id="accountScreen" class="overlay hidden">
+    <h1>ACC<span>OUNT</span></h1>
+    <div class="profile-card">
+      <div class="avatar-circle" id="avatarCircle">?</div>
+      <div class="profile-info">
+        <div class="nickname-row">
+          <input id="nicknameInput" class="nickname-input" maxlength="16" placeholder="Choose a nickname" />
+          <button class="cta secondary small" id="saveNicknameBtn">SAVE</button>
+        </div>
+        <div class="profile-sub" id="profileSub"></div>
+      </div>
+    </div>
+    <div class="gauge-wrap" id="accountGaugeWrap"></div>
+    <div class="menu-hud">
+      <div class="menu-hud-item">🪙 <span id="accountCoins">0</span></div>
+      <div class="menu-hud-item">💎 <span id="accountGems">0</span></div>
+      <div class="menu-hud-item">🏆 Best <span id="accountBest">0</span></div>
+    </div>
+    <div class="stats-card" id="statsCard">
+      <h2>Your stats</h2>
+      <div class="stats-grid">
+        <div class="stat-item"><b id="stRuns">0</b><span>Runs played</span></div>
+        <div class="stat-item"><b id="stWords">0</b><span>Words typed</span></div>
+        <div class="stat-item"><b id="stAccuracy">–</b><span>Accuracy</span></div>
+        <div class="stat-item"><b id="stWpm">–</b><span>Avg speed (WPM)</span></div>
+        <div class="stat-item"><b id="stCombo">0</b><span>Best combo</span></div>
+        <div class="stat-item"><b id="stSps">–</b><span>Best steps / sec</span></div>
+        <div class="stat-item"><b id="stLevels">0</b><span>Levels cleared</span></div>
+        <div class="stat-item"><b id="stTime">0m</b><span>Time played</span></div>
+        <div class="stat-item"><b id="stStreak">0</b><span>Day streak 🔥</span></div>
+        <div class="stat-item"><b id="stLongest">0</b><span>Longest streak</span></div>
+      </div>
+      <div class="stats-since" id="stSince"></div>
+    </div>
+    <div class="toggle-row">
+      <label class="toggle-switch">
+        <input type="checkbox" id="leaderboardOptToggle" />
+        <span class="toggle-slider"></span>
+      </label>
+      <div class="toggle-label">
+        <b>Show me on the public leaderboard</b>
+        <small id="toggleSub">Off by default. Turn on to submit your best Free Mode run under your nickname.</small>
+      </div>
+    </div>
+    <div class="toggle-row">
+      <label class="toggle-switch">
+        <input type="checkbox" id="ghostToggle" />
+        <span class="toggle-slider"></span>
+      </label>
+      <div class="toggle-label">
+        <b>Show pace ghost in Free Mode</b>
+        <small>A marker on the timer bar showing where your best run was at this point. Turn off any time.</small>
+      </div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-label">
+        <b>Typing language</b>
+        <small>Choose which language the words you type are in.</small>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="cta secondary small" id="langEnBtn" style="padding:6px 12px;">EN</button>
+        <button class="cta secondary small" id="langFrBtn" style="padding:6px 12px;">FR</button>
+      </div>
+    </div>
+    <div class="toggle-row">
+      <label class="toggle-switch">
+        <input type="checkbox" id="translationToggle" />
+        <span class="toggle-slider"></span>
+      </label>
+      <div class="toggle-label">
+        <b>Show translation hint</b>
+        <small>Shows the word's translation in parentheses underneath it — French hints in English mode, English hints in French mode.</small>
+      </div>
+    </div>
+    <p id="accountStatusMsg" style="font-size:11px;"></p>
+    <div class="menu-row">
+      <button class="cta" id="accountSignBtn">SIGN IN WITH GOOGLE</button>
+    </div>
+    <button class="cta secondary" id="accountBackBtn">BACK</button>
+  </div>
+
+  <div id="leaderboardScreen" class="overlay hidden">
+    <h1>LEADER<span>BOARD</span></h1>
+    <p id="leaderboardMsg">Best Free Mode runs, ranked by steps climbed — ties broken by steps per second. Matching names show a short tag so you can tell players apart. English and French runs are ranked separately, since typing in each language isn't an equal race.</p>
+    <div class="shop-tabs">
+      <div class="shop-tab" id="lbTabEn">English</div>
+      <div class="shop-tab" id="lbTabFr">French</div>
+    </div>
+    <div class="leaderboard-list" id="leaderboardList"></div>
+    <button class="cta secondary" id="leaderboardBackBtn">BACK</button>
+  </div>
+
+  <div id="reviveScreen" class="overlay hidden">
+    <h1>YOU <span>FELL</span></h1>
+    <p id="reviveDesc">Pay coins to get back up and keep climbing?</p>
+    <div class="final-score" id="reviveScoreShown">0</div>
+    <p style="font-size:11px;">steps climbed so far</p>
+    <div class="menu-row">
+      <button class="cta" id="reviveAcceptBtn">REVIVE</button>
+      <button class="cta secondary" id="reviveDeclineBtn">GIVE UP</button>
+    </div>
+  </div>
+
+  <div id="endScreen" class="overlay hidden">
+    <h1 id="endTitle">YOU <span>FELL</span></h1>
+    <div class="final-score" id="finalScore">0</div>
+    <p id="endSub">steps climbed</p>
+    <div id="endExtra" style="font-family:var(--mono); font-size:12px; color:var(--text-dim); white-space:pre-line; line-height:1.6;"></div>
+    <div class="menu-row">
+      <button class="cta" id="retryBtn">TRY AGAIN</button>
+      <button class="cta secondary hidden" id="shareBtn">SHARE 🔗</button>
+      <button class="cta secondary" id="toMenuBtn">MENU</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  /* ---------- wind ambience (synthesized — only plays with the Open Sky backdrop) ---------- */
+  let audioCtx = null, windNodes = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return null;
+      audioCtx = new AC();
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function startWind(){
+    const ctx = ensureAudio();
+    if(!ctx || windNodes) return;
+    const bufferSize = ctx.sampleRate * 2;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++) data[i] = Math.random()*2-1;
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer; noise.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 480;
+
+    const gainNode = ctx.createGain();
+    gainNode.gain.value = 0;
+
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.13;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 0.022;
+    lfo.connect(lfoGain);
+    lfoGain.connect(gainNode.gain);
+
+    noise.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    noise.start();
+    lfo.start();
+
+    gainNode.gain.setTargetAtTime(0.055, ctx.currentTime, 0.6);
+
+    windNodes = { noise, filter, gainNode, lfo, lfoGain };
+  }
+  function stopWind(){
+    if(!windNodes || !audioCtx) return;
+    const nodes = windNodes;
+    windNodes = null;
+    try{
+      nodes.gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.25);
+      setTimeout(()=>{ try{ nodes.noise.stop(); nodes.lfo.stop(); }catch(e){} }, 500);
+    }catch(e){}
+  }
+
+  /* ---------- cozy pad ambience (synthesized — only plays with the Aetherial Drift backdrop) ---------- */
+  let padNodes = null;
+  function startPad(){
+    const ctx = ensureAudio();
+    if(!ctx || padNodes) return;
+    const master = ctx.createGain();
+    master.gain.value = 0;
+    master.connect(ctx.destination);
+
+    // slow filtered chord, warm and soft — three detuned triangle voices + a gentle chime pluck loop
+    const freqs = [196.0, 246.94, 293.66]; // G3, B3, D4 — warm major triad
+    const voices = [];
+    freqs.forEach((f,i)=>{
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = f;
+      osc.detune.value = (i-1)*4;
+      const vGain = ctx.createGain();
+      vGain.gain.value = 0.22;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 900;
+      osc.connect(filt); filt.connect(vGain); vGain.connect(master);
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.08 + i*0.02;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 60;
+      lfo.connect(lfoGain); lfoGain.connect(filt.frequency);
+      osc.start(); lfo.start();
+      voices.push({osc,lfo,vGain,filt});
+    });
+    master.gain.setTargetAtTime(0.05, ctx.currentTime, 1.2);
+
+    // occasional soft chime pluck, gives it a "cosy" character instead of a flat drone
+    const chimeNotes = [523.25, 587.33, 659.25, 783.99, 880.0];
+    let chimeTimer = setInterval(()=>{
+      if(!padNodes) return;
+      if(Math.random() > 0.55) return;
+      const freq = chimeNotes[Math.floor(Math.random()*chimeNotes.length)];
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      osc.connect(g); g.connect(master);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.09, t+0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+1.6);
+      osc.start(t); osc.stop(t+1.7);
+    }, 2600);
+
+    padNodes = { master, voices, chimeTimer };
+  }
+  function stopPad(){
+    if(!padNodes || !audioCtx) return;
+    const nodes = padNodes;
+    padNodes = null;
+    clearInterval(nodes.chimeTimer);
+    try{
+      nodes.master.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
+      setTimeout(()=>{ nodes.voices.forEach(v=>{ try{ v.osc.stop(); v.lfo.stop(); }catch(e){} }); }, 900);
+    }catch(e){}
+  }
+
+  // ambience only plays while the game is running AND the matching backdrop is equipped
+  function syncWind(){
+    if(state && state.running && save.equippedBackdrop === 'sky') startWind(); else stopWind();
+    if(state && state.running && save.equippedBackdrop === 'aetherial') startPad(); else stopPad();
+  }
+
+  // short ascending chime played on every completed word ("pararan")
+  function playCompleteChime(){
+    const ctx = ensureAudio();
+    if(!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99];
+    notes.forEach((freq, i)=>{
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      osc.connect(gain); gain.connect(ctx.destination);
+      const t = now + i*0.07;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.18, t+0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t+0.18);
+      osc.start(t);
+      osc.stop(t+0.2);
+    });
+  }
+
+  /* ---------- desktop-only gate ---------- */
+  function looksLikeTouchOnlyDevice(){
+    const coarseOnly = window.matchMedia && window.matchMedia('(pointer: coarse)').matches && !(window.matchMedia('(any-pointer: fine)').matches);
+    const uaFlag = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const narrow = Math.min(window.innerWidth, window.innerHeight) < 620;
+    return (coarseOnly || uaFlag) && narrow;
+  }
+  function initMobileGate(){
+    const gate = document.getElementById('mobileGate');
+    if(!gate) return;
+    if(looksLikeTouchOnlyDevice() && !sessionStorage.getItem('ascent_gate_dismissed')){
+      gate.classList.add('show');
+    }
+    document.getElementById('mobileGateContinue').addEventListener('click', ()=>{
+      try{ sessionStorage.setItem('ascent_gate_dismissed','1'); }catch(e){}
+      gate.classList.remove('show');
+    });
+  }
+
+  /* ---------- ambient embers (default Void backdrop only) ---------- */
+  let emberTimer = null;
+  function startEmbers(){
+    stopEmbers();
+    const layer = document.getElementById('emberLayer');
+    if(!layer) return;
+    emberTimer = setInterval(()=>{
+      if(save.equippedBackdrop !== 'void') return;
+      const ember = document.createElement('div');
+      ember.className = 'ember';
+      const size = 2 + Math.random()*3;
+      ember.style.width = size+'px';
+      ember.style.height = size+'px';
+      ember.style.left = (Math.random()*100)+'%';
+      ember.style.setProperty('--drift', (Math.random()*60-30)+'px');
+      ember.style.animationDuration = (5 + Math.random()*5)+'s';
+      layer.appendChild(ember);
+      setTimeout(()=>ember.remove(), 11000);
+    }, 700);
+  }
+  function stopEmbers(){ clearInterval(emberTimer); emberTimer = null; }
+
+  /* ---------- persistence ---------- */
+  const SAVE_KEY = 'ascent_save_v1';
+  const FREE_MODE_MIN_LEVEL = 3; // spec asked for 10 — lowered for demo/testing; change this one constant for production
+
+  function defaultSave(){
+    return {
+      xp:0, level:1, coins:0, gems:0, bestScoreFree:0,
+      levelStars:{},
+      unlockedLevel: 1,
+      completedLevels:{},
+      ownedCharSkins:['default'], equippedCharSkin:'default',
+      ownedStairSkins:['default'], equippedStairSkin:'default',
+      ownedBackdrops:['void'], equippedBackdrop:'void',
+      claimedLevelRewards:{},
+      claimedFreeRewards:{},
+      claimedComboRewards:{},
+      redeemedCodes:[],
+      nickname:null,
+      leaderboardOptOut:true,
+      showGhost:true,
+      bestFreeStepDurations:[],
+      language:'en',
+      showTranslation:false,
+      stats: defaultStats()
+    };
+  }
+  // Lifetime stats — tracked per account/device from the first time the player uses the game.
+  function defaultStats(){
+    return {
+      firstPlayed: Date.now(),
+      runs:0, freeRuns:0, levelRuns:0, levelWins:0,
+      words:0, keysCorrect:0, keysWrong:0,
+      playSeconds:0,
+      bestCombo:0, bestStepsPerSec:0,
+      lastPlayDay:null, dayStreak:0, longestDayStreak:0
+    };
+  }
+  function todayKey(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  // Friend challenge links look like  ?beat=47&lang=fr  — read once on load.
+  let pendingChallenge = null;
+  try{
+    const qp = new URLSearchParams(location.search);
+    const beat = parseInt(qp.get('beat'), 10);
+    if(beat > 0 && beat <= 10000) pendingChallenge = { beat, lang: qp.get('lang') === 'fr' ? 'fr' : 'en' };
+  }catch(e){}
+  let lastRun = null;
+  function dayDiff(aKey, bKey){
+    const a = new Date(aKey + 'T00:00:00'), b = new Date(bKey + 'T00:00:00');
+    return Math.round((b - a) / 86400000);
+  }
+  // Called once at the end of every run. Counters are collected in `state` during the run and flushed here,
+  // so we never write to storage on every keystroke.
+  function recordRunStats(opts){
+    const s = save.stats;
+    s.runs++;
+    if(opts.mode === 'free') s.freeRuns++; else s.levelRuns++;
+    if(opts.won) s.levelWins++;
+    s.words += opts.words;
+    s.keysCorrect += opts.keysCorrect;
+    s.keysWrong += opts.keysWrong;
+    s.playSeconds += Math.round(opts.seconds);
+    if(opts.bestCombo > s.bestCombo) s.bestCombo = opts.bestCombo;
+    if(opts.mode === 'free' && opts.stepsPerSecond > s.bestStepsPerSec) s.bestStepsPerSec = opts.stepsPerSecond;
+    const today = todayKey();
+    if(s.lastPlayDay !== today){
+      s.dayStreak = (s.lastPlayDay && dayDiff(s.lastPlayDay, today) === 1) ? s.dayStreak + 1 : 1;
+      s.lastPlayDay = today;
+      if(s.dayStreak > s.longestDayStreak) s.longestDayStreak = s.dayStreak;
+    }
+  }
+  let save = defaultSave();
+  function loadSave(){
+    try{
+      const raw = localStorage.getItem(SAVE_KEY);
+      if(raw) save = Object.assign(defaultSave(), JSON.parse(raw));
+      if(!save.claimedLevelRewards) save.claimedLevelRewards = {};
+      if(!save.claimedFreeRewards) save.claimedFreeRewards = {};
+      if(!save.claimedComboRewards) save.claimedComboRewards = {};
+      if(!save.redeemedCodes) save.redeemedCodes = [];
+      if(!save.completedLevels) save.completedLevels = {};
+      if(!save.bestFreeStepDurations) save.bestFreeStepDurations = [];
+      if(typeof save.gems !== 'number') save.gems = 0;
+      if(typeof save.showGhost !== 'boolean') save.showGhost = true;
+      if(typeof save.language !== 'string') save.language = 'en';
+      if(typeof save.showTranslation !== 'boolean') save.showTranslation = false;
+      // older saves have no stats block — start tracking from now and fill in any missing fields
+      save.stats = Object.assign(defaultStats(), save.stats || {});
+    }catch(e){ save = defaultSave(); }
+  }
+  function persistSave(){
+    try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){}
+    pushCloudSave();
+  }
+  loadSave();
+
+  /* ---------- Firebase (accounts, cloud save, leaderboard) ---------- */
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCAI0XYer8zD2IzPlLOYRE_HhaQ_sJZIhg",
+    authDomain: "acsent-18b7a.firebaseapp.com",
+    projectId: "acsent-18b7a",
+    storageBucket: "acsent-18b7a.firebasestorage.app",
+    messagingSenderId: "69880410292",
+    appId: "1:69880410292:web:07b314edc1afd3eb2aa7e1",
+    // Paste your Google Analytics "G-XXXXXXXXXX" id here (Firebase console > Project settings) to turn analytics on.
+    measurementId: ""
+  };
+  let fbAuth = null, fbDb = null, currentUser = null, cloudSaveTimer = null, fbAnalytics = null;
+  // Safe no-op when analytics isn't configured, so the game never breaks because of tracking.
+  function track(name, params){
+    try{ if(fbAnalytics) fbAnalytics.logEvent(name, params || {}); }catch(e){}
+  }
+  function fbReady(){ return !!(fbAuth && FIREBASE_CONFIG.apiKey !== "PASTE_ME"); }
+
+  try{
+    if(typeof firebase !== 'undefined' && FIREBASE_CONFIG.apiKey !== "PASTE_ME"){
+      firebase.initializeApp(FIREBASE_CONFIG);
+      fbAuth = firebase.auth();
+      fbDb = firebase.firestore();
+      if(FIREBASE_CONFIG.measurementId && firebase.analytics){ try{ fbAnalytics = firebase.analytics(); }catch(e){} }
+      fbAuth.onAuthStateChanged(onAuthChanged);
+    }
+  }catch(e){ console.warn('Firebase not configured yet', e); }
+
+  function onAuthChanged(user){
+    currentUser = user;
+    if(user && !save.nickname){
+      save.nickname = (user.displayName || 'Player').split(' ')[0].slice(0,16);
+      persistSave();
+    }
+    refreshAuthUI();
+    refreshMenu();
+    if(typeof refreshAccountScreen === 'function' && !accountScreenEl().classList.contains('hidden')) refreshAccountScreen();
+    if(user) pullCloudSave(user.uid);
+  }
+  function accountScreenEl(){ return document.getElementById('accountScreen'); }
+  function signIn(){
+    if(!fbReady()){ showToast('Firebase isn\'t set up yet — paste your project config into the code first.'); return; }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    fbAuth.signInWithPopup(provider).catch(err=>showToast('Sign-in failed: ' + err.message));
+  }
+  function signOutUser(){ if(fbAuth) fbAuth.signOut(); }
+  function refreshAuthUI(){
+    const shortLabel = save.nickname
+      ? save.nickname.toUpperCase().slice(0,10)
+      : (currentUser ? (currentUser.displayName||'Account').split(' ')[0].toUpperCase().slice(0,10) : 'ACCOUNT');
+    const labelEl = document.getElementById('authBtnLabel');
+    const dotEl = document.getElementById('authAvatarDot');
+    const menuBtn = document.getElementById('menuAuthBtn');
+    if(labelEl) labelEl.textContent = shortLabel;
+    if(menuBtn) menuBtn.textContent = shortLabel;
+    if(dotEl){
+      const skin = (typeof CHAR_SKINS !== 'undefined') ? (CHAR_SKINS.find(s=>s.id===save.equippedCharSkin) || CHAR_SKINS[0]) : null;
+      dotEl.style.display = (save.nickname || currentUser) ? 'inline-block' : 'none';
+      if(skin) dotEl.style.background = skin.torso;
+    }
+  }
+
+  // ---- merging a cloud save with this device's save ----
+  // Old behaviour: whichever save had the higher level replaced the other completely, so skins, level stars
+  // or stats earned on the "losing" device were lost. Now collections are combined and numbers keep their best value.
+  function unionArr(a, b){ return Array.from(new Set([].concat(a || [], b || []))); }
+  function mergeMaps(a, b){
+    const out = Object.assign({}, a || {});
+    Object.keys(b || {}).forEach(k=>{
+      const x = out[k], y = b[k];
+      out[k] = (typeof x === 'number' && typeof y === 'number') ? Math.max(x, y) : (x || y);
+    });
+    return out;
+  }
+  function progressOf(sv){ return (sv.level||1)*1000 + (sv.xp||0); }
+  function mergeStats(a, b){
+    const x = Object.assign(defaultStats(), a || {}), y = Object.assign(defaultStats(), b || {});
+    const out = {};
+    Object.keys(defaultStats()).forEach(k=>{
+      if(k === 'firstPlayed') out[k] = Math.min(x[k] || Date.now(), y[k] || Date.now());
+      else if(k === 'lastPlayDay') out[k] = [x[k], y[k]].filter(Boolean).sort().pop() || null;
+      else out[k] = Math.max(x[k] || 0, y[k] || 0);   // max, never sum: both devices may already include the same runs
+    });
+    return out;
+  }
+  function mergeSaves(local, cloud){
+    const base = progressOf(cloud) > progressOf(local) ? cloud : local;   // more advanced save decides coins, XP, level, settings
+    const other = base === cloud ? local : cloud;
+    const m = Object.assign(defaultSave(), other, base);
+    m.ownedCharSkins   = unionArr(local.ownedCharSkins, cloud.ownedCharSkins);
+    m.ownedStairSkins  = unionArr(local.ownedStairSkins, cloud.ownedStairSkins);
+    m.ownedBackdrops   = unionArr(local.ownedBackdrops, cloud.ownedBackdrops);
+    m.redeemedCodes    = unionArr(local.redeemedCodes, cloud.redeemedCodes);
+    m.levelStars       = mergeMaps(local.levelStars, cloud.levelStars);
+    m.completedLevels  = mergeMaps(local.completedLevels, cloud.completedLevels);
+    m.claimedLevelRewards = mergeMaps(local.claimedLevelRewards, cloud.claimedLevelRewards);
+    m.claimedFreeRewards  = mergeMaps(local.claimedFreeRewards, cloud.claimedFreeRewards);
+    m.claimedComboRewards = mergeMaps(local.claimedComboRewards, cloud.claimedComboRewards);
+    m.unlockedLevel    = Math.max(local.unlockedLevel || 1, cloud.unlockedLevel || 1);
+    m.bestScoreFree    = Math.max(local.bestScoreFree || 0, cloud.bestScoreFree || 0);
+    const bestSrc = (cloud.bestScoreFree || 0) > (local.bestScoreFree || 0) ? cloud : local;
+    m.bestFreeStepDurations = bestSrc.bestFreeStepDurations || [];
+    m.stats = mergeStats(local.stats, cloud.stats);
+    return m;
+  }
+
+  async function pullCloudSave(uid){
+    if(!fbDb) return;
+    try{
+      const doc = await fbDb.collection('saves').doc(uid).get();
+      if(doc.exists){
+        const cloud = doc.data();
+        const beforeJson = JSON.stringify(save);
+        save = mergeSaves(save, cloud);
+        if(JSON.stringify(save) !== beforeJson){
+          try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){}
+          refreshHud(); refreshMenu();
+          if(progressOf(cloud) > progressOf(JSON.parse(beforeJson))) showToast('☁️ Cloud save loaded');
+        }
+      }
+      pushCloudSave();
+    }catch(e){ console.warn('Cloud save pull failed', e); }
+  }
+  function pushCloudSave(){
+    if(!currentUser || !fbDb) return;
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(()=>{
+      fbDb.collection('saves').doc(currentUser.uid).set(save).catch(e=>console.warn('Cloud save push failed', e));
+    }, 800);
+  }
+
+  // A run "beats" the stored best if it climbed more steps, or — on a tie — was faster (steps/sec).
+  function beatsExisting(newScore, newSps, oldScore, oldSps){
+    if(newScore !== oldScore) return newScore > oldScore;
+    return newSps > oldSps;
+  }
+  // English and French are two different typing tasks, so each user gets a separate
+  // leaderboard entry per language (doc id "<uid>_<lang>") rather than one shared doc —
+  // otherwise submitting a run in one language would wipe out the best run in the other.
+  function leaderboardDocId(lang){ return currentUser.uid + '_' + lang; }
+  async function submitLeaderboardScore(stepsPerSecond, score){
+    if(!currentUser || !fbDb) return;
+    if(save.leaderboardOptOut) return;
+    score = Math.floor(score);
+    if(!(score > 0) || !(stepsPerSecond > 0)) return;
+    try{
+      const ref = fbDb.collection('leaderboard').doc(leaderboardDocId(save.language));
+      const existing = await ref.get();
+      const oldScore = existing.exists ? (existing.data().score || 0) : 0;
+      const oldSps = existing.exists ? (existing.data().stepsPerSecond || 0) : 0;
+      if(!existing.exists || beatsExisting(score, stepsPerSecond, oldScore, oldSps)){
+        // uid-derived tag lets the leaderboard tell apart two players who picked the same nickname
+        await ref.set({ name: String(save.nickname || currentUser.displayName || 'Anonymous').slice(0,16), tag: currentUser.uid.slice(-4), stepsPerSecond, score, language: save.language, updatedAt: Date.now() });
+      }
+    }catch(e){ console.warn('Leaderboard submit failed', e); }
+  }
+
+  function removeFromLeaderboard(){
+    if(!currentUser || !fbDb) return;
+    ['en','fr'].forEach(lang=>{
+      fbDb.collection('leaderboard').doc(leaderboardDocId(lang)).delete().catch(e=>console.warn('Leaderboard removal failed', e));
+    });
+  }
+
+  // Leaderboard names come from other players' documents, so they must never be inserted as raw HTML.
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  let leaderboardLangTab = 'en';
+  async function loadLeaderboard(lang){
+    if(lang) leaderboardLangTab = lang;
+    const list = document.getElementById('leaderboardList');
+    const msg = document.getElementById('leaderboardMsg');
+    const tabEn = document.getElementById('lbTabEn');
+    const tabFr = document.getElementById('lbTabFr');
+    if(tabEn && tabFr){
+      tabEn.classList.toggle('active', leaderboardLangTab === 'en');
+      tabFr.classList.toggle('active', leaderboardLangTab === 'fr');
+    }
+    if(!fbReady()){
+      list.innerHTML = '';
+      msg.textContent = "Leaderboard needs Firebase set up first — sign in once it's configured.";
+      return;
+    }
+    list.innerHTML = '<div style="font-family:var(--mono); font-size:11px; color:var(--text-dim);">Loading…</div>';
+    try{
+      // Ask Firestore for only the top 10 of this language (10 reads instead of 200).
+      // Needs the composite index in firestore.indexes.json: language ↑, score ↓, stepsPerSecond ↓.
+      const snap = await fbDb.collection('leaderboard')
+        .where('language', '==', leaderboardLangTab)
+        .orderBy('score', 'desc')
+        .orderBy('stepsPerSecond', 'desc')
+        .limit(10)
+        .get();
+      const top = [];
+      snap.forEach(doc=>top.push(doc.data()));
+      // count how many times each display name appears in the visible list — only players
+      // who share a name with someone else get the disambiguating #tag suffix
+      const nameCounts = {};
+      top.forEach(d=>{ const n=d.name||'Anonymous'; nameCounts[n]=(nameCounts[n]||0)+1; });
+      list.innerHTML = '';
+      top.forEach((d, i)=>{
+        const n = d.name||'Anonymous';
+        const label = escapeHtml(nameCounts[n] > 1 && d.tag ? `${n} #${d.tag}` : n);
+        const row = document.createElement('div');
+        row.className = 'leaderboard-row';
+        row.innerHTML = `<span class="rank">#${i+1}</span><span class="name">${label}</span><span class="val">${d.score||0} steps <span style="color:var(--text-dim);">· ${(d.stepsPerSecond||0).toFixed(2)}/s</span></span>`;
+        list.appendChild(row);
+      });
+      if(top.length===0) msg.textContent = 'No runs yet — be the first on the board.';
+    }catch(e){
+      list.innerHTML = '';
+      msg.textContent = 'Could not load leaderboard: ' + e.message;
+    }
+  }
+
+  function xpToNext(level){ return 40 + (level-1)*25; }
+  function grantXP(amount){
+    save.xp += amount;
+    while(save.xp >= xpToNext(save.level)){
+      save.xp -= xpToNext(save.level);
+      save.level++;
+    }
+    persistSave();
+  }
+  function grantCoins(amount){ save.coins += amount; persistSave(); }
+  function grantGems(amount){ save.gems += amount; persistSave(); }
+
+  /* ---------- reward toast ---------- */
+  let toastTimer = null;
+  function showToast(msg){
+    let t = document.getElementById('rewardToast');
+    if(!t){ t = document.createElement('div'); t.id = 'rewardToast'; document.body.appendChild(t); }
+    t.textContent = msg;
+    t.classList.remove('show');
+    void t.offsetWidth;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 4200);
+  }
+
+  /* ---------- level-clear gift rewards ---------- */
+  const LEVEL_REWARDS = {
+    1:{coins:15, skins:[]},
+    2:{coins:15, skins:[]},
+    3:{coins:20, skins:[]},
+    4:{coins:20, skins:[]},
+    5:{coins:25, skins:[]},
+    6:{coins:25, skins:[]},
+    7:{coins:30, skins:[]},
+    8:{coins:30, skins:[]},
+    9:{coins:40, gems:5, skins:[{type:'backdrop', id:'sky'}]},
+    10:{coins:40, skins:[{type:'char', id:'violet'}]},
+    11:{coins:45, skins:[]},
+    12:{coins:45, skins:[{type:'stair', id:'jungle'}]},
+    13:{coins:50, gems:5, skins:[]},
+    14:{coins:55, skins:[{type:'stair', id:'volcanic'}]},
+    15:{coins:60, skins:[{type:'char', id:'shadow'}]},
+    16:{coins:100, gems:15, skins:[{type:'char', id:'nova'},{type:'stair', id:'neon'},{type:'backdrop', id:'aurora'}]}
+  };
+  const FREE_MODE_REWARDS = [
+    { score:20,  coins:30, skins:[{type:'char', id:'crimson'}] },
+    { score:45,  coins:50, skins:[{type:'stair', id:'obsidian'}] },
+    { score:75,  coins:70, gems:10, skins:[{type:'backdrop', id:'dusk'}] },
+    { score:120, coins:120, gems:20, skins:[{type:'char', id:'starlit'}] }
+  ];
+  // Combo-streak rewards, checked live during a run — kept separate from level/free-mode
+  // milestones since these fire mid-run rather than at the end.
+  const COMBO_MILESTONES = [
+    { combo:20, type:'heart', label:'+1 bonus heart' },
+    { combo:35, type:'revive', label:'free revive earned' },
+    { combo:50, type:'skin', category:'char', id:'comet', label:'Comet skin unlocked' }
+  ];
+  function grantSkin(type, id){
+    if(type==='char' && !save.ownedCharSkins.includes(id)) save.ownedCharSkins.push(id);
+    if(type==='stair' && !save.ownedStairSkins.includes(id)) save.ownedStairSkins.push(id);
+    if(type==='backdrop' && !save.ownedBackdrops.includes(id)) save.ownedBackdrops.push(id);
+  }
+  function backfillCompletedLevels(){
+    if(!save.completedLevels) save.completedLevels = {};
+    LEVELS.forEach(lvl=>{
+      if(lvl.id < save.unlockedLevel || save.levelStars[lvl.id]){
+        save.completedLevels[lvl.id] = true;
+      }
+    });
+  }
+  function checkLevelRewards(silent){
+    if(!save.claimedLevelRewards) save.claimedLevelRewards = {};
+    if(!save.completedLevels) save.completedLevels = {};
+    const msgs = [];
+    Object.keys(LEVEL_REWARDS).forEach(idStr=>{
+      const id = parseInt(idStr, 10);
+      if(save.completedLevels[id] && !save.claimedLevelRewards[id]){
+        const r = LEVEL_REWARDS[id];
+        let msg = `🎁 Level ${id} clear reward:`;
+        if(r.coins){ save.coins += r.coins; msg += ` +${r.coins} coins`; }
+        if(r.gems){ save.gems += r.gems; msg += ` +${r.gems} gems`; }
+        (r.skins||[]).forEach(sk=>{ grantSkin(sk.type, sk.id); msg += ` · new ${sk.type} skin`; });
+        save.claimedLevelRewards[id] = true;
+        msgs.push(msg);
+      }
+    });
+    if(msgs.length){
+      persistSave();
+      if(!silent) showToast(msgs.join('\n'));
+      refreshHud();
+    }
+    return msgs;
+  }
+  function checkFreeModeRewards(silent){
+    if(!save.claimedFreeRewards) save.claimedFreeRewards = {};
+    const msgs = [];
+    FREE_MODE_REWARDS.forEach(r=>{
+      if(save.bestScoreFree >= r.score && !save.claimedFreeRewards[r.score]){
+        let msg = `🎁 ${r.score}-step milestone:`;
+        if(r.coins){ save.coins += r.coins; msg += ` +${r.coins} coins`; }
+        if(r.gems){ save.gems += r.gems; msg += ` +${r.gems} gems`; }
+        (r.skins||[]).forEach(sk=>{ grantSkin(sk.type, sk.id); msg += ` · new ${sk.type} skin`; });
+        save.claimedFreeRewards[r.score] = true;
+        msgs.push(msg);
+      }
+    });
+    if(msgs.length){
+      persistSave();
+      if(!silent) showToast(msgs.join('\n'));
+      refreshHud();
+    }
+    return msgs;
+  }
+
+  /* ---------- gift codes ---------- */
+  // Codes are NOT stored in this file. Each code is a document in the Firestore collection "giftCodes"
+  // (document id = the code, fields: reward, desc). Rules let anyone read one code by exact name but not list them.
+  // reward formats: "all_skins" | "char:<id>" | "stair:<id>" | "backdrop:<id>" | "coins:<n>" | "gems:<n>"
+  function grantAllSkins(){
+    CHAR_SKINS.forEach(s=>grantSkin('char', s.id));
+    STAIR_SKINS.forEach(s=>grantSkin('stair', s.id));
+    BACKDROPS.forEach(s=>grantSkin('backdrop', s.id));
+  }
+  function applyGiftReward(reward){
+    const parts = String(reward || '').split(':');
+    const kind = parts[0], val = parts[1];
+    if(kind === 'all_skins'){ grantAllSkins(); return true; }
+    if(kind === 'coins'){ const n = Math.min(parseInt(val, 10) || 0, 5000); if(n > 0){ save.coins += n; return true; } return false; }
+    if(kind === 'gems'){ const n = Math.min(parseInt(val, 10) || 0, 500); if(n > 0){ save.gems += n; return true; } return false; }
+    const lists = { char: CHAR_SKINS, stair: STAIR_SKINS, backdrop: BACKDROPS };
+    if(lists[kind] && lists[kind].some(s=>s.id === val)){ grantSkin(kind, val); return true; }
+    return false;
+  }
+  let redeeming = false;
+  async function redeemGiftCode(raw){
+    const code = (raw||'').trim().toLowerCase();
+    const statusEl = document.getElementById('giftStatusMsg');
+    const say = (color, text)=>{ statusEl.style.color = color; statusEl.textContent = text; };
+    if(!code){ say('var(--text-dim)', 'Type a code first.'); return; }
+    if(!/^[a-z0-9_-]{2,32}$/.test(code)){ say('var(--danger)', 'That code is not valid.'); return; }
+    if(save.redeemedCodes.includes(code)){ say('var(--text-dim)', 'Already redeemed on this account.'); return; }
+    if(!fbDb){ say('var(--danger)', 'Codes need an internet connection — try again in a moment.'); return; }
+    if(redeeming) return;
+    redeeming = true;
+    say('var(--text-dim)', 'Checking code…');
+    try{
+      const snap = await fbDb.collection('giftCodes').doc(code).get();
+      if(!snap.exists){ say('var(--danger)', 'That code is not valid.'); return; }
+      const data = snap.data() || {};
+      if(!applyGiftReward(data.reward)){ say('var(--danger)', 'That code could not be applied.'); return; }
+      save.redeemedCodes.push(code);
+      persistSave();
+      refreshHud();
+      say('var(--glow)', `Code redeemed — ${data.desc || 'reward added'}.`);
+      showToast(`🎁 Code "${code}" redeemed!`);
+      track('gift_code_redeemed', { code });
+    }catch(e){
+      say('var(--danger)', 'Could not check this code right now. Try again later.');
+    }finally{ redeeming = false; }
+  }
+
+  /* ---------- skins ---------- */
+  const CHAR_SKINS = [
+    { id:'default', name:'Amber', cost:0, head:'radial-gradient(circle at 40% 30%,#fff,#ffb84d 60%,#b8701a)', torso:'linear-gradient(180deg,#ffce85,#ffb84d)', leg:'#c97f1e' },
+    { id:'cool', name:'Glacier', cost:60, head:'radial-gradient(circle at 40% 30%,#fff,#7fd8ff 60%,#2b8fbf)', torso:'linear-gradient(180deg,#bfeeff,#7fd8ff)', leg:'#3aa0cf' },
+    { id:'ember', name:'Ember', cost:60, head:'radial-gradient(circle at 40% 30%,#fff,#ff7a5c 60%,#c93f24)', torso:'linear-gradient(180deg,#ffb39e,#ff7a5c)', leg:'#d4552f' },
+    { id:'coral', name:'Coral', cost:90, head:'radial-gradient(circle at 40% 30%,#fff,#ff9d8f 60%,#d9503c)', torso:'linear-gradient(180deg,#ffcfc4,#ff9d8f)', leg:'#e06a4f' },
+    { id:'mint', name:'Mint', cost:90, head:'radial-gradient(circle at 40% 30%,#fff,#8fffc4 60%,#2fb87a)', torso:'linear-gradient(180deg,#c8ffe0,#8fffc4)', leg:'#3fcf8f' },
+    { id:'violet', name:'Violet', unlock:{type:'level', id:10}, head:'radial-gradient(circle at 40% 30%,#fff,#c58cff 60%,#7b3fc9)', torso:'linear-gradient(180deg,#e6cfff,#c58cff)', leg:'#8b4fd6' },
+    { id:'crimson', name:'Crimson', unlock:{type:'freeScore', value:20}, glow:'#ff5c7a', head:'radial-gradient(circle at 40% 30%,#fff,#ff5c7a 60%,#a3163d)', torso:'linear-gradient(180deg,#ff9fb2,#ff5c7a)', leg:'#c22b52' },
+    { id:'shadow', name:'Shadow', unlock:{type:'level', id:15}, head:'radial-gradient(circle at 40% 30%,#8f8fb0,#2c2c40 60%,#111119)', torso:'linear-gradient(180deg,#4a4a63,#22222f)', leg:'#1a1a24' },
+    { id:'starlit', name:'Starlit', unlock:{type:'freeScore', value:120}, glow:'#a8b6ff', head:'radial-gradient(circle at 35% 30%,#fff,#dfe8ff 45%,#8fa0ff 75%,#4a5fd6)', torso:'linear-gradient(180deg,#eef1ff,#a8b6ff)', leg:'#5f6fdb' },
+    { id:'nova', name:'Nova', unlock:{type:'level', id:16}, glow:'#ffe27a', head:'radial-gradient(circle at 40% 30%,#fff,#ffe27a 55%,#ffb100)', torso:'linear-gradient(180deg,#fff3c4,#ffd15c)', leg:'#e0a422' },
+    { id:'comet', name:'Comet', unlock:{type:'combo', value:50}, glow:'#7ee0ff', head:'radial-gradient(circle at 35% 30%,#fff,#c9f7ff 45%,#7ee0ff 75%,#2fb8e0)', torso:'linear-gradient(180deg,#e4fbff,#8fe8ff)', leg:'#4fc7e6' },
+    { id:'celestia', name:'Celestia', gemCost:35, glow:'#ff8ce8', head:'radial-gradient(circle at 35% 28%,#fff,#ffe0fb 30%,#ff9cf0 60%,#c34fe0 85%)', torso:'linear-gradient(180deg,#ffe6fb,#ff9cf0 55%,#d158e0)', leg:'#b23fc9' }
+  ];
+  const SHINY_STAIRS = ['obsidian','neon','gilded'];
+  const STAIR_SKINS = [
+    { id:'default', name:'Nightfall', cost:0, tread:'#2a3350', treadEdge:'#3a4568', riser:'#141a2c', glow:'#3effb2' },
+    { id:'sunset', name:'Sunset', cost:60, tread:'#4a2f3d', treadEdge:'#6b3f52', riser:'#2a1620', glow:'#ff9a5c' },
+    { id:'frost', name:'Frost', cost:60, tread:'#28394a', treadEdge:'#3c5266', riser:'#101c26', glow:'#8fe8ff' },
+    { id:'copper', name:'Copper', cost:80, tread:'#3f2c22', treadEdge:'#5c4130', riser:'#1e130e', glow:'#ffb066' },
+    { id:'jungle', name:'Jungle', unlock:{type:'level', id:12}, tread:'#233d2e', treadEdge:'#345643', riser:'#12211a', glow:'#c8ff5c' },
+    { id:'volcanic', name:'Volcanic', unlock:{type:'level', id:14}, tread:'#3d2320', treadEdge:'#5c322c', riser:'#1c0f0d', glow:'#ff6a3d' },
+    { id:'obsidian', name:'Obsidian', unlock:{type:'freeScore', value:45}, tread:'#191c26', treadEdge:'#262b3a', riser:'#0a0b10', glow:'#c9a8ff' },
+    { id:'neon', name:'Neon', unlock:{type:'level', id:16}, tread:'#231a3d', treadEdge:'#382a5c', riser:'#120c1f', glow:'#ff4de0' },
+    { id:'gilded', name:'Gilded', gemCost:30, tread:'#4a3f24', treadEdge:'#7a6534', riser:'#221b0d', glow:'#ffe27a' }
+  ];
+  const BACKDROPS = [
+    { id:'void', name:'Void', cost:0 },
+    { id:'sky', name:'Open Sky', unlock:{type:'level', id:9}, sound:true },
+    { id:'dusk', name:'Dusk Horizon', unlock:{type:'freeScore', value:75} },
+    { id:'aurora', name:'Aurora Night', unlock:{type:'level', id:16} },
+    { id:'aetherial', name:'Aetherial Drift', gemCost:40, sound:true }
+  ];
+
+  // "packs": a backdrop can force its own stair colors, like Open Sky's grass look
+  const PACK_STAIR_OVERRIDE = {
+    sky: { tread:'#3f7a45', treadEdge:'#5aa15f', riser:'#1f3d22', glow:'#d4ff6a' },
+    aetherial: { tread:'#5c4a6e', treadEdge:'#7a6690', riser:'#2e2440', glow:'#ffd9a3' }
+  };
+
+  function applyBackdrop(id){
+    document.body.classList.remove('theme-sky','theme-aurora','theme-dusk','theme-aetherial');
+    if(id === 'sky') document.body.classList.add('theme-sky');
+    if(id === 'aurora') document.body.classList.add('theme-aurora');
+    if(id === 'dusk') document.body.classList.add('theme-dusk');
+    if(id === 'aetherial') document.body.classList.add('theme-aetherial');
+    buildSkyLayer(id);
+    if(PACK_STAIR_OVERRIDE[id]){
+      const p = PACK_STAIR_OVERRIDE[id];
+      document.documentElement.style.setProperty('--tread', p.tread);
+      document.documentElement.style.setProperty('--tread-edge', p.treadEdge);
+      document.documentElement.style.setProperty('--riser', p.riser);
+      document.documentElement.style.setProperty('--glow', p.glow);
+      document.documentElement.style.setProperty('--glow-dim', p.glow+'55');
+    } else {
+      applyStairSkin(save.equippedStairSkin);
+    }
+    syncWind();
+    if(state && state.running) drawStairs();
+  }
+
+  function buildSkyLayer(id){
+    const layer = document.getElementById('skyLayer');
+    if(!layer) return;
+    layer.innerHTML = "";
+    if(id === 'sky'){
+      for(let i=0;i<5;i++){
+        const cloud = document.createElement('div');
+        cloud.className = 'cloud';
+        const w = 70 + Math.random()*90;
+        cloud.style.width = w+'px';
+        cloud.style.height = (w*0.4)+'px';
+        cloud.style.top = (10 + Math.random()*55) + '%';
+        cloud.style.left = (Math.random()*100) + '%';
+        cloud.style.animationDuration = (35 + Math.random()*30) + 's';
+        cloud.style.animationDelay = (-Math.random()*40) + 's';
+        layer.appendChild(cloud);
+      }
+      for(let i=0;i<3;i++){
+        const wave = document.createElement('div');
+        wave.className = 'skywave';
+        wave.style.bottom = (i*26) + 'px';
+        wave.style.opacity = 0.5 - i*0.13;
+        wave.style.animationDuration = (18 + i*6) + 's';
+        layer.appendChild(wave);
+      }
+    } else if(id === 'aurora'){
+      for(let i=0;i<40;i++){
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.position='absolute';
+        star.style.width='2px'; star.style.height='2px';
+        star.style.background='#fff'; star.style.borderRadius='50%';
+        star.style.top = (Math.random()*70)+'%';
+        star.style.left = (Math.random()*100)+'%';
+        star.style.animationDuration = (2 + Math.random()*3)+'s';
+        star.style.animationDelay = (-Math.random()*4)+'s';
+        layer.appendChild(star);
+      }
+      const colors = ['#7fffd4','#c58cff','#8fe8ff'];
+      for(let i=0;i<3;i++){
+        const ribbon = document.createElement('div');
+        ribbon.className = 'ribbon';
+        ribbon.style.top = (8 + i*14) + '%';
+        ribbon.style.background = `linear-gradient(90deg, transparent, ${colors[i%colors.length]}, transparent)`;
+        ribbon.style.animationDuration = (6 + i*2) + 's';
+        layer.appendChild(ribbon);
+      }
+    } else if(id === 'dusk'){
+      for(let i=0;i<28;i++){
+        const spark = document.createElement('div');
+        spark.className = 'spark';
+        const size = 1.5 + Math.random()*2;
+        spark.style.width = size+'px'; spark.style.height = size+'px';
+        spark.style.top = (Math.random()*80)+'%';
+        spark.style.left = (Math.random()*100)+'%';
+        spark.style.animationDuration = (2 + Math.random()*3)+'s';
+        spark.style.animationDelay = (-Math.random()*4)+'s';
+        layer.appendChild(spark);
+      }
+      const sun = document.createElement('div');
+      sun.style.position='absolute'; sun.style.left='50%'; sun.style.bottom='8%';
+      sun.style.width='140px'; sun.style.height='140px'; sun.style.marginLeft='-70px';
+      sun.style.borderRadius='50%';
+      sun.style.background='radial-gradient(circle, rgba(255,220,160,0.55), transparent 70%)';
+      sun.style.filter='blur(4px)';
+      layer.appendChild(sun);
+    } else if(id === 'aetherial'){
+      // signature backdrop: warm low sun with soft rotating light rays, drifting clouds both
+      // in front of AND behind the stairs/climber for depth, and glowing light motes rising
+      // gently through the scene — replaces the earlier floating-islands version.
+      const rays = document.createElement('div');
+      rays.className = 'sun-rays';
+      rays.style.top = '6%';
+      layer.appendChild(rays);
+
+      const sun = document.createElement('div');
+      sun.className = 'sun-orb';
+      sun.style.width = '210px'; sun.style.height='210px'; sun.style.marginLeft='-105px'; sun.style.top='6%';
+      layer.appendChild(sun);
+
+      const behindLayer = document.createElement('div');
+      behindLayer.style.position='absolute'; behindLayer.style.inset='0'; behindLayer.style.zIndex='0';
+      const frontLayer = document.createElement('div');
+      frontLayer.style.position='absolute'; frontLayer.style.inset='0'; frontLayer.style.zIndex='2';
+      layer.style.zIndex='0';
+
+      function makeCloud(){
+        const c = document.createElement('div');
+        c.className = 'a-cloud';
+        const w = 90+Math.random()*130;
+        c.style.width=w+'px'; c.style.height=(w*0.4)+'px';
+        c.style.top=(8+Math.random()*60)+'%';
+        c.style.left=(Math.random()*100)+'%';
+        c.style.animationDuration=(40+Math.random()*35)+'s';
+        c.style.animationDelay=(-Math.random()*50)+'s';
+        return c;
+      }
+      for(let i=0;i<3;i++) behindLayer.appendChild(makeCloud());
+      for(let i=0;i<3;i++) frontLayer.appendChild(makeCloud());
+
+      function makeMote(front){
+        const m = document.createElement('div');
+        m.className = 'aether-mote';
+        const size = front ? (4+Math.random()*4) : (2+Math.random()*2.5);
+        m.style.width = size+'px'; m.style.height = size+'px';
+        m.style.left = (Math.random()*100)+'%';
+        m.style.bottom = (-10-Math.random()*30)+'px';
+        m.style.setProperty('--drift', (Math.random()*80-40)+'px');
+        m.style.animationDuration = (front ? (6+Math.random()*5) : (9+Math.random()*6))+'s';
+        m.style.animationDelay = (-Math.random()*10)+'s';
+        return m;
+      }
+      for(let i=0;i<10;i++) behindLayer.appendChild(makeMote(false));
+      for(let i=0;i<8;i++) frontLayer.appendChild(makeMote(true));
+
+      layer.appendChild(behindLayer);
+      layer.appendChild(frontLayer);
+    }
+  }
+
+  function applyStairSkin(id){
+    const s = STAIR_SKINS.find(x=>x.id===id) || STAIR_SKINS[0];
+    document.documentElement.style.setProperty('--tread', s.tread);
+    document.documentElement.style.setProperty('--tread-edge', s.treadEdge);
+    document.documentElement.style.setProperty('--riser', s.riser);
+    document.documentElement.style.setProperty('--glow', s.glow);
+    document.documentElement.style.setProperty('--glow-dim', s.glow+'55');
+  }
+  function applyCharSkin(id){
+    const s = CHAR_SKINS.find(x=>x.id===id) || CHAR_SKINS[0];
+    document.querySelector('#climber .head').style.background = s.head;
+    document.querySelector('#climber .torso').style.background = s.torso;
+    document.querySelector('#climber .legL').style.background = s.leg;
+    document.querySelector('#climber .legR').style.background = s.leg;
+    if(s.glow){
+      climberEl.classList.add('shiny');
+      climberEl.style.setProperty('--skin-glow', s.glow);
+    } else {
+      climberEl.classList.remove('shiny');
+    }
+  }
+
+  /* ---------- word pools ---------- */
+  const POOLS = {
+    short:  ["cat","dog","run","sun","key","top","red","big","yes","new","one","two","far","hot","sky","bee","cup","map","bag","car","fox","hat","ice","jam","kit","log","mud","net","owl","pen","rug","sea","tap","urn","van","wax","zoo","air","art","bat","bed","box","bus","can","cow","day","ear","egg","fan","fly","gas","gym","hen","ink","jar","lab","lid","mix","nap","oak","pad","pit","raw","sip","tub","use","vet","wig","yak","zip","ace","age","arm","bar","bay","bit","bud","cab","cap","cot","cub","cut","dam","den","dip","dot","dry","dye","elf","end","era","eve","fig","fin","fit","fog","fun","gap","gut","hip","hub","hut","jaw","jet","job","jog","jug","keg","lap","law","lit","lot","mat","mob","mop","nod","nut","oil","orb","pal","pea","peg","pet","pig","pod","pop","pot","pub","pug","ram","rat","rib","rim","rip","rob","rot","row","rub","rum","sad","sap","sat","saw","set","sit","ski","sob","sod","sow","spa","spy","tag","tan","tea","ten","tie","tin","tip","toe","ton","toy","try","tug","vow","wag","war","web","wet","win","wit"],
+    medium: ["climb","stair","light","quick","spark","glass","storm","ghost","panel","frost","noble","raven","blaze","cabin","coral","dance","eagle","feast","frame","giant","honey","igloo","jolly","knight","lemon","mango","ocean","piano","queen","rider","sable","tiger","uncle","vivid","whale","xenon","yield","zebra","amber","bloom","charm","delta","ember","flame","grove","haven","ivory","joker","knife","lunar","mirth","nudge","orbit","pearl","quilt","ridge","saint","teeth","ultra","vault","windy","yacht","zesty","acorn","brave","crisp","dwarf","field","grasp","humid","inbox","jumbo","karma","lodge","nymph","olive","plaza","quest","rally","scarf","tempo","unify","verse","witty","youth","brisk","chase","drift","ethos","fable","glide","hover","inlet","jelly","kneel","lofty","mossy","niche","opera","pouch","rapid","siren","toast","urban","vigor","wharf","aisle","blush","crane","dusty","essay","fudge","gnome","husky","judge","koala","latch","medal","pixel","riser","salsa","trace","urged","vapor","waltz"],
+    long:   ["ascension","gravity","staircase","momentum","corridor","threshold","luminous","cascade","velocity","fracture","skyline","horizon","plateau","boulder","crevice","avalanche","altitude","endeavor","triumph","anchor","vortex","tempest","wanderer","odyssey","pinnacle","zenith","paragon","citadel","labyrinth","cathedral","obsidian","phantom","eclipse","tsunami","blizzard","sanctuary","fortress","covenant","crescendo","infinity","gauntlet","marathon","resonance","whirlwind","cyclone","overture","radiance","serenity","tenacity","vigilant","catalyst","dominion","emissary","frontier","guardian","harmonic","illusion","juncture","kinetics","monolith","nocturne","paradise","quandary","reckless","symphony","turbulent","undertow","wavefront"]
+  };
+  POOLS.mixed = [].concat(POOLS.short, POOLS.medium, POOLS.long);
+
+  /* ---------- French translations + typable French pools ----------
+     Translations are display-only hints (shown under the word in parentheses),
+     except when Language is set to French, in which case the accent-stripped
+     "typable" French word becomes the word the player actually types. */
+  const POOLS_FR_DISPLAY = {
+    short: ["chat","chien","courir","soleil","clé","haut","rouge","grand","oui","neuf","un","deux","loin","chaud","ciel","abeille","tasse","carte","sac","voiture","renard","chapeau","glace","confiture","trousse","bûche","boue","filet","hibou","stylo","tapis","mer","robinet","urne","camion","cire","zoo","air","art","chauve-souris","lit","boîte","bus","boîte","vache","jour","oreille","œuf","ventilateur","mouche","gaz","gym","poule","encre","pot","labo","couvercle","mélange","sieste","chêne","coussin","fosse","cru","gorgée","cuve","usage","véto","perruque","yack","fermeture","as","âge","bras","bar","baie","bit","bourgeon","taxi","casquette","berceau","petit","coupe","barrage","tanière","trempette","point","sec","teinture","elfe","fin","ère","veille","figue","nageoire","en forme","brouillard","amusant","écart","intestin","hanche","moyeu","cabane","mâchoire","jet","travail","jogging","cruche","fût","tour","loi","allumé","lot","tapis","foule","serpillière","signe","noix","huile","orbe","copain","pois","cheville","animal","cochon","cosse","pop","pot","pub","carlin","bélier","rat","côte","jante","déchirure","voler","pourriture","rangée","frotter","rhum","triste","sève","assis","scie","ensemble","asseoir","ski","sanglot","gazon","semer","spa","espion","étiquette","bronzage","thé","dix","cravate","étain","pourboire","orteil","tonne","jouet","essayer","remorqueur","vœu","remuer","guerre","toile","mouillé","gagner","esprit"],
+    medium: ["grimper","marche","lumière","rapide","étincelle","verre","tempête","fantôme","panneau","givre","noble","corbeau","flamme","cabane","corail","danse","aigle","festin","cadre","géant","miel","igloo","joyeux","chevalier","citron","mangue","océan","piano","reine","cavalier","sable","tigre","oncle","vif","baleine","xénon","céder","zèbre","ambre","floraison","charme","delta","braise","flamme","bosquet","havre","ivoire","farceur","couteau","lunaire","gaieté","coup de coude","orbite","perle","couette","crête","saint","dents","ultra","voûte","venteux","yacht","piquant","gland","courageux","croustillant","nain","champ","saisir","humide","boîte de réception","géant","karma","loge","nymphe","olive","place","quête","rassemblement","écharpe","tempo","unifier","vers","spirituel","jeunesse","vif","poursuite","dérive","éthique","fable","glisser","planer","crique","gelée","s'agenouiller","élevé","moussu","niche","opéra","pochette","rapide","sirène","toast","urbain","vigueur","quai","allée","rougir","grue","poussiéreux","essai","fondant","gnome","husky","juge","koala","loquet","médaille","pixel","marche","salsa","trace","exhorté","vapeur","valse"],
+    long: ["ascension","gravité","escalier","élan","couloir","seuil","lumineux","cascade","vélocité","fracture","horizon urbain","horizon","plateau","rocher","fissure","avalanche","altitude","effort","triomphe","ancre","tourbillon","tempête","vagabond","odyssée","sommet","zénith","parangon","citadelle","labyrinthe","cathédrale","obsidienne","fantôme","éclipse","tsunami","blizzard","sanctuaire","forteresse","alliance","crescendo","infini","gant","marathon","résonance","tourbillon","cyclone","ouverture","éclat","sérénité","ténacité","vigilant","catalyseur","domination","émissaire","frontière","gardien","harmonique","illusion","jonction","cinétique","monolithe","nocturne","paradis","dilemme","imprudent","symphonie","turbulent","courant sous-marin","front d'onde"]
+  };
+  function toTypable(s){
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
+  }
+  const POOLS_FR = { short:[], medium:[], long:[] };
+  const EN_TO_FR = {};
+  const FRTYPED_TO_EN = {};
+  ['short','medium','long'].forEach(tier=>{
+    POOLS[tier].forEach((enWord, i)=>{
+      const frDisplay = (POOLS_FR_DISPLAY[tier] && POOLS_FR_DISPLAY[tier][i]) ? POOLS_FR_DISPLAY[tier][i] : enWord;
+      const frTyped = toTypable(frDisplay) || enWord;
+      POOLS_FR[tier].push(frTyped);
+      EN_TO_FR[enWord] = frDisplay;
+      FRTYPED_TO_EN[frTyped] = enWord;
+    });
+  });
+  POOLS_FR.mixed = [].concat(POOLS_FR.short, POOLS_FR.medium, POOLS_FR.long);
+
+  // Phrase-level hints (levels 12 & 13 stay typed in English regardless of Language setting —
+  // the translation is shown only as a hint under the phrase).
+  const PHRASE_TRANSLATIONS = {
+    "type fast":"tape vite",
+    "climb high":"monte haut",
+    "keep going":"continue",
+    "reach the top":"atteins le sommet",
+    "one more step":"encore un pas",
+    "practice makes perfect":"c'est en forgeant qu'on devient forgeron",
+    "every step counts twice":"chaque pas compte double",
+    "the higher you climb":"plus tu montes haut",
+    "focus on your rhythm":"concentre-toi sur ton rythme",
+    "almost at the summit":"presque au sommet"
+  };
+  function getTranslationHint(word){
+    if(!word) return "";
+    if(PHRASE_TRANSLATIONS[word]) return PHRASE_TRANSLATIONS[word];
+    if(save.language === 'fr') return FRTYPED_TO_EN[word] || "";
+    return EN_TO_FR[word] || "";
+  }
+  function activePools(){ return save.language === 'fr' ? POOLS_FR : POOLS; }
+
+  function makeBag(poolName){
+    let bag = [];
+    let last = null;
+    function refill(){
+      bag = activePools()[poolName].slice();
+      for(let i=bag.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [bag[i],bag[j]] = [bag[j],bag[i]];
+      }
+      if(bag[0] === last && bag.length>1){
+        [bag[0],bag[1]] = [bag[1],bag[0]];
+      }
+    }
+    return function next(){
+      if(bag.length===0) refill();
+      const w = bag.pop();
+      last = w;
+      return w;
+    };
+  }
+
+  function shuffleArray(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  /* ---------- levels, grouped into worlds that get harder as you go ---------- */
+  const AZ = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  function buildOddEven(){
+    const odds=[], evens=[];
+    AZ.forEach((c,i)=>{ if(i%2===0) odds.push(c); else evens.push(c); });
+    return odds.concat(evens);
+  }
+  const WORLD_NAMES = { 1:'World 1 — Beginner', 2:'World 2 — Intermediate', 3:'World 3 — Advanced', 4:'World 4 — Expert' };
+
+  const LEVELS = [
+    { id:1, world:1, name:"Alphabet", desc:"the alphabet, in order", type:'sequence', sequence:AZ, time:6000 },
+    { id:2, world:1, name:"Alphabet Shuffle", desc:"same letters, random order every run", type:'shuffleSequence', base:AZ, time:5200 },
+    { id:3, world:1, name:"Short Words", desc:"short words only", type:'randomPool', pool:'short', count:16, time:3800 },
+    { id:4, world:1, name:"Random Words", desc:"random words, no fixed order", type:'randomPool', pool:'medium', count:14, time:4500 },
+
+    { id:5, world:2, name:"Quick Words", desc:"medium words, much shorter timer", type:'randomPool', pool:'medium', count:14, time:2800 },
+    { id:6, world:2, name:"Speed Alphabet", desc:"the alphabet again, much faster", type:'sequence', sequence:AZ, time:2400 },
+    { id:7, world:2, name:"Shuffled Speed", desc:"shuffled letters, tight timer", type:'shuffleSequence', base:AZ, time:2000 },
+    { id:8, world:2, name:"Long Words", desc:"longer words, more to type per step", type:'randomPool', pool:'long', count:12, time:5800 },
+
+    { id:9, world:3, name:"Mixed Bag", desc:"short and long mixed, timer drops as you climb", type:'randomPool', pool:'mixed', count:16, time:4200, timeDecay:120 },
+    { id:10, world:3, name:"Reverse Alphabet", desc:"z down to a", type:'sequence', sequence:AZ.slice().reverse(), time:3000 },
+    { id:11, world:3, name:"Odd-Even Alphabet", desc:"odd letters, then even — out of order", type:'sequence', sequence:buildOddEven(), time:2800 },
+    { id:12, world:3, name:"Phrases I", desc:"short phrases, spaces included", type:'sequence', sequence:["type fast","climb high","keep going","reach the top","one more step"], time:7000 },
+
+    { id:13, world:4, name:"Phrases II", desc:"longer, trickier phrases", type:'sequence', sequence:["practice makes perfect","every step counts twice","the higher you climb","focus on your rhythm","almost at the summit"], time:8500 },
+    { id:14, world:4, name:"Alphabet Blitz", desc:"shuffled letters, brutal speed", type:'shuffleSequence', base:AZ, time:1600 },
+    { id:15, world:4, name:"Deep Mix", desc:"mixed words, aggressive timer decay", type:'randomPool', pool:'mixed', count:20, time:3600, timeDecay:100 },
+    { id:16, world:4, name:"The Summit", desc:"the hardest climb yet", type:'randomPool', pool:'mixed', count:26, time:3200, timeDecay:90 }
+  ];
+
+  /* ---------- DOM refs ---------- */
+  const stairSvg = document.getElementById('stairSvg');
+  const stairScene = document.getElementById('stairScene');
+  const climberEl = document.getElementById('climber');
+  const stageEl = document.getElementById('stage');
+  const heartsEl = document.getElementById('hearts');
+  const scoreValEl = document.getElementById('scoreVal');
+  const bestTagEl = document.getElementById('bestTag');
+  const modeTagEl = document.getElementById('modeTag');
+  const wordBanner = document.getElementById('wordBanner');
+  const wordTranslationEl = document.getElementById('wordTranslation');
+  const wordTimerFill = document.getElementById('wordTimerFill');
+  const wordZoneEl = document.getElementById('wordZone');
+  const comboTagEl = document.getElementById('comboTag');
+  const playerLevelTag = document.getElementById('playerLevelTag');
+  const coinsVal = document.getElementById('coinsVal');
+  const coinsVal2 = document.getElementById('coinsVal2');
+  const gemsVal = document.getElementById('gemsVal');
+  const gemsVal2 = document.getElementById('gemsVal2');
+
+  const mainMenu = document.getElementById('mainMenu');
+  const levelSelect = document.getElementById('levelSelect');
+  const shopScreen = document.getElementById('shopScreen');
+  const endScreen = document.getElementById('endScreen');
+  const endTitle = document.getElementById('endTitle');
+  const endSub = document.getElementById('endSub');
+  const endExtra = document.getElementById('endExtra');
+  const finalScoreEl = document.getElementById('finalScore');
+  const freeLockMsg = document.getElementById('freeLockMsg');
+  const reviveScreen = document.getElementById('reviveScreen');
+
+  /* ---------- stair geometry (flat oblique projection, drawn in SVG) ---------- */
+  const VISIBLE_STEPS = 7;
+  const TREAD_W = 190, RISER_H = 50, DEPTH_DX = 78, DEPTH_DY = 16;
+  const ORIGIN_X = 185, ORIGIN_Y = 430;
+  const PARALLAX_BEHIND_FACTOR = 0.5;
+
+  function stepAnchor(i){
+    return { x: ORIGIN_X + i*DEPTH_DX, y: ORIGIN_Y - i*(RISER_H+DEPTH_DY) };
+  }
+
+  function svgEl(tag, attrs){
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for(const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function drawStairs(){
+    stairSvg.innerHTML = "";
+    const groupActive = svgEl('g', { id:'stepsGroupActive' });
+    const groupBehind = svgEl('g', { id:'stepsGroupBehind' });
+    const BEHIND_STEPS = 3;
+    for(let i=VISIBLE_STEPS-1;i>=-BEHIND_STEPS;i--){
+      const stepNum = state.currentStepIndex + i;
+      if(stepNum < 0) continue;
+      if(i >= 1 && state.mode.words[stepNum] === undefined) continue;
+      const a = stepAnchor(i);
+      const fadeOpacity = Math.min(1, Math.max(1 - i*0.09, 0.35));
+      const isActive = i===0;
+      const isClimbed = stepNum < state.currentStepIndex;
+
+      const riser = svgEl('rect', {
+        x:a.x, y:a.y-RISER_H, width:TREAD_W, height:RISER_H,
+        fill: getComputedStyle(document.documentElement).getPropertyValue(isClimbed?'--glow-dim':'--riser').trim() || (isClimbed?'#1e4d3d':'#141a2c'),
+        opacity: fadeOpacity, rx:3
+      });
+
+      const tx0=a.x, ty0=a.y-RISER_H, tx1=a.x+TREAD_W, ty1=a.y-RISER_H;
+      const tx2=a.x+TREAD_W+DEPTH_DX, ty2=a.y-RISER_H-DEPTH_DY, tx3=a.x+DEPTH_DX, ty3=a.y-RISER_H-DEPTH_DY;
+      const tread = svgEl('polygon', {
+        points:`${tx0},${ty0} ${tx1},${ty1} ${tx2},${ty2} ${tx3},${ty3}`,
+        fill: getComputedStyle(document.documentElement).getPropertyValue(isClimbed?'--glow-dim':'--tread-edge').trim() || (isClimbed?'#1e4d3d':'#3a4568'),
+        opacity: fadeOpacity
+      });
+
+      if(isActive){
+        tread.setAttribute('id','activeTread');
+        tread.setAttribute('stroke', 'var(--glow)');
+        tread.setAttribute('stroke-width','2');
+        if(SHINY_STAIRS.includes(save.equippedStairSkin)){
+          tread.classList.add('shiny');
+        }
+      }
+
+      const targetGroup = i < 0 ? groupBehind : groupActive;
+      targetGroup.appendChild(riser);
+      targetGroup.appendChild(tread);
+    }
+    stairSvg.appendChild(groupBehind);
+    stairSvg.appendChild(groupActive);
+    positionClimber();
+  }
+
+  function getActiveTreadCenter(){
+    const activeEl = document.getElementById('activeTread');
+    if(activeEl){
+      const bbox = activeEl.getBBox();
+      return { cx: bbox.x + bbox.width/2, cy: bbox.y + bbox.height/2 };
+    }
+    const a = stepAnchor(0);
+    return { cx: a.x + TREAD_W/2 + DEPTH_DX/2, cy: a.y - RISER_H - DEPTH_DY/2 };
+  }
+
+  function positionClimber(){
+    const { cx, cy } = getActiveTreadCenter();
+    climberEl.style.left = cx + 'px';
+    climberEl.style.top = cy + 'px';
+  }
+
+  /* ---------- game state ---------- */
+  let state = null;
+
+  function wordFor(mode, index){
+    if(mode.type === 'free'){
+      let pool;
+      if(index < 6) pool = 'short'; else if(index < 16) pool = 'medium'; else pool = 'mixed';
+      if(!mode.bags[pool]) mode.bags[pool] = makeBag(pool);
+      return mode.bags[pool]();
+    }
+    if(mode.type === 'randomPool'){
+      if(index >= mode.count) return null;
+      if(!mode.bag) mode.bag = makeBag(mode.pool);
+      return mode.bag();
+    }
+    return mode.sequence[index] !== undefined ? mode.sequence[index] : null;
+  }
+
+  // Average word/phrase length for a pool or a fixed sequence, used as the "typical" length
+  // a level's designed duration was tuned around.
+  function poolAverageLength(poolName){
+    const arr = activePools()[poolName];
+    if(!arr || !arr.length) return 5;
+    return arr.reduce((s,w)=>s+w.length,0) / arr.length;
+  }
+  function sequenceAverageLength(seq){
+    if(!seq || !seq.length) return 5;
+    return seq.reduce((s,w)=>s+w.length,0) / seq.length;
+  }
+  function referenceLength(mode){
+    if(mode.type === 'randomPool' || mode.type === 'free') return poolAverageLength(mode.pool || 'mixed');
+    if(mode.sequence) return sequenceAverageLength(mode.sequence);
+    return 5;
+  }
+  // Intelligent, length-aware timer: a level's configured "time" is the budget for a
+  // *typical*-length word in that level, then scaled up or down for the actual word/phrase
+  // in front of you — so a long phrase (or a longer French translation) gets proportionally
+  // more time instead of the same flat window as a 3-letter word. Difficulty still ramps up
+  // the further you climb, but a per-character safety floor (which only loosens slightly,
+  // never disappears) guarantees every word stays physically typeable.
+  function timeForStep(mode, index){
+    const word = (mode.words && mode.words[index]) || '';
+    const len = Math.max(1, word.length);
+    let base;
+    if(mode.type === 'free'){
+      base = Math.max(2200, 5200 - index*90);
+    } else {
+      base = mode.time;
+      if(mode.timeDecay) base = Math.max(base - index*mode.timeDecay, Math.round(mode.time*0.45));
+    }
+    const refLen = mode.refLen || referenceLength(mode);
+    const lenFactor = len / Math.max(1, refLen);
+    let scaled = base * Math.max(0.55, lenFactor);
+    const perCharFloor = mode.type === 'free'
+      ? Math.max(85, 150 - index*0.6)
+      : Math.max(95, 155 - index*2.2);
+    scaled = Math.max(scaled, len*perCharFloor);
+    return Math.max(700, Math.round(scaled));
+  }
+
+  function ensureWords(mode, upTo){
+    while(mode.words.length <= upTo){
+      const w = wordFor(mode, mode.words.length);
+      if(w === null || w === undefined) break;
+      mode.words.push(w);
+    }
+  }
+
+  function renderHearts(){
+    heartsEl.innerHTML = "";
+    const lives = state ? state.lives : 3;
+    const slots = Math.max(3, lives); // bonus hearts from combo rewards can push past 3
+    for(let i=0;i<slots;i++){
+      const h = document.createElement('span');
+      h.textContent = '♥';
+      h.style.color = i >= lives ? '#3a3f52' : 'var(--danger)';
+      heartsEl.appendChild(h);
+    }
+  }
+
+  function refreshHud(){
+    playerLevelTag.textContent = save.level;
+    coinsVal.textContent = save.coins;
+    if(coinsVal2) coinsVal2.textContent = save.coins;
+    if(gemsVal) gemsVal.textContent = save.gems;
+    if(gemsVal2) gemsVal2.textContent = save.gems;
+    if(state && state.mode.type === 'free'){
+      bestTagEl.textContent = 'BEST ' + save.bestScoreFree;
+    } else {
+      bestTagEl.textContent = '';
+    }
+  }
+
+  /* ---------- HUD play/menu mode: shop/gift/account/leaderboard buttons only show
+     on the home screen, never while a run is actually in progress ---------- */
+  function setHudPlaying(isPlaying){
+    document.getElementById('hud').classList.toggle('in-game', !!isPlaying);
+  }
+
+  function buildScene(){
+    ensureWords(state.mode, state.currentStepIndex + VISIBLE_STEPS);
+    drawStairs();
+    renderWordBanner();
+    buildFlameRow();
+    updateFlameState();
+  }
+
+  function buildFlameRow(){
+    const rect = wordBanner.getBoundingClientRect();
+    const w = Math.max(70, rect.width + 60);
+    const h = Math.max(60, rect.height + 50);
+    flameFxEl.style.width = w + 'px';
+    flameFxEl.style.height = h + 'px';
+  }
+
+  function renderWordBanner(){
+    const target = state.mode.words[state.currentStepIndex];
+    if(!target) return;
+    let html = "";
+    for(let i=0;i<target.length;i++){
+      const ch = target[i] === ' ' ? '&nbsp;' : target[i];
+      if(i < state.typed.length) html += `<span class="char-correct">${ch}</span>`;
+      else if(i === state.typed.length) html += `<span class="char-cursor">${ch}</span>`;
+      else html += ch;
+    }
+    wordBanner.innerHTML = html;
+    if(wordTranslationEl){
+      if(save.showTranslation){
+        const hint = getTranslationHint(target);
+        wordTranslationEl.textContent = hint ? `(${hint})` : "";
+      } else {
+        wordTranslationEl.textContent = "";
+      }
+    }
+  }
+
+  function resetTimerBar(dur){
+    wordTimerFill.style.transition = 'none';
+    wordTimerFill.style.transform = 'scaleX(1)';
+    void wordTimerFill.offsetWidth;
+    wordTimerFill.style.transition = `transform ${dur}ms linear`;
+    wordTimerFill.style.transform = 'scaleX(0)';
+  }
+
+  const ghostMarkerEl = document.getElementById('ghostMarker');
+  function updateGhostMarker(){
+    if(!ghostMarkerEl) return;
+    if(state && state.mode.type === 'free' && save.showGhost){
+      const ghostDur = save.bestFreeStepDurations && save.bestFreeStepDurations[state.currentStepIndex];
+      const dur = timeForStep(state.mode, state.currentStepIndex);
+      if(ghostDur){
+        const frac = Math.min(1, Math.max(0, ghostDur / dur));
+        ghostMarkerEl.style.left = (frac*100) + '%';
+        ghostMarkerEl.style.opacity = '1';
+        return;
+      }
+    }
+    ghostMarkerEl.style.opacity = '0';
+  }
+
+  function startTimerForStep(){
+    clearTimeout(state.timerHandle);
+    const dur = timeForStep(state.mode, state.currentStepIndex);
+    resetTimerBar(dur);
+    state.currentWordStartTime = Date.now();
+    updateGhostMarker();
+    state.timerHandle = setTimeout(onFail, dur);
+  }
+
+  function spawnAura(){
+    const { cx, cy } = getActiveTreadCenter();
+    const aura = document.createElement('div');
+    aura.className = 'aura';
+    aura.style.left = cx + 'px'; aura.style.top = cy + 'px';
+    aura.style.width='18px'; aura.style.height='18px'; aura.style.marginLeft='-9px'; aura.style.marginTop='-9px';
+    stairScene.appendChild(aura);
+    setTimeout(()=>aura.remove(), 600);
+  }
+
+  function spawnWordAura(){
+    const aura = document.createElement('div');
+    aura.className = 'aura';
+    aura.style.left = '50%'; aura.style.top = '46%';
+    aura.style.width='16px'; aura.style.height='16px'; aura.style.marginLeft='-8px'; aura.style.marginTop='-8px';
+    wordZoneEl.appendChild(aura);
+    setTimeout(()=>aura.remove(), 600);
+  }
+
+  function spawnStepTrail(){
+    const { cx, cy } = getActiveTreadCenter();
+    const trail = document.createElement('div');
+    trail.className = 'step-trail';
+    trail.style.width = '34px'; trail.style.height='34px';
+    trail.style.left = (cx-17) + 'px'; trail.style.top = (cy-17) + 'px';
+    stairScene.appendChild(trail);
+    setTimeout(()=>trail.remove(), 550);
+  }
+
+  function playStepAnim(){
+    climberEl.classList.remove('idle');
+    climberEl.classList.add('stepping');
+    setTimeout(()=>{ climberEl.classList.remove('stepping'); climberEl.classList.add('idle'); }, 320);
+  }
+
+  const COMBO_TIERS = [
+    { min:3,  mult:2, name:'Frost', color:'#5fc9ff', cls:'flame-t2' },
+    { min:7,  mult:3, name:'Nova',  color:'#c58cff', cls:'flame-t3' },
+    { min:12, mult:4, name:'Solar', color:'#ffb84d', cls:'flame-t4' }
+  ];
+  function getTier(combo){
+    let tier = null;
+    for(const t of COMBO_TIERS){ if(combo >= t.min) tier = t; }
+    return tier;
+  }
+  function comboMultiplier(combo){
+    const t = getTier(combo);
+    return t ? t.mult : 1;
+  }
+  function updateComboDisplay(){
+    const tier = getTier(state.combo);
+    if(tier){
+      comboTagEl.textContent = `x${tier.mult}  ${tier.name}  ·  ${state.combo} streak`;
+      comboTagEl.style.color = tier.color;
+      comboTagEl.style.opacity = 1;
+    } else {
+      comboTagEl.style.opacity = 0;
+    }
+  }
+  const flameFxEl = document.getElementById('flameFx');
+  const edgePulseEl = document.getElementById('edgePulse');
+  function updateFlameState(){
+    const tier = state ? getTier(state.combo) : null;
+    const onFire = !!(state && state.mode.type === 'free' && tier);
+    flameFxEl.classList.remove('flame-t2','flame-t3','flame-t4');
+    wordBanner.classList.remove('flame-t2','flame-t3','flame-t4');
+    if(edgePulseEl) edgePulseEl.classList.remove('flame-t2','flame-t3','flame-t4','show');
+    if(onFire){
+      flameFxEl.classList.add(tier.cls, 'show');
+      wordBanner.classList.add(tier.cls);
+      if(edgePulseEl) edgePulseEl.classList.add(tier.cls, 'show');
+    } else {
+      flameFxEl.classList.remove('show');
+    }
+  }
+
+  // Checks the combo-streak reward table against the run's current combo, granting each
+  // milestone at most once per run (state.claimedComboThisRun).
+  function checkComboMilestones(){
+    COMBO_MILESTONES.forEach(m=>{
+      if(state.combo !== m.combo) return;
+      if(state.claimedComboThisRun[m.combo]) return;
+      state.claimedComboThisRun[m.combo] = true;
+      if(m.type === 'heart'){
+        state.lives += 1;
+        renderHearts();
+      } else if(m.type === 'revive'){
+        state.freeRevives = (state.freeRevives||0) + 1;
+      } else if(m.type === 'skin'){
+        const firstTime = !save.claimedComboRewards[m.combo];
+        grantSkin(m.category, m.id);
+        if(firstTime){ save.claimedComboRewards[m.combo] = true; persistSave(); }
+      }
+      showToast(`🔥 ${m.combo}-streak: ${m.label}!`);
+    });
+  }
+
+  function onCorrectStep(){
+    clearTimeout(state.timerHandle);
+    spawnAura();
+    spawnWordAura();
+    spawnStepTrail();
+    playStepAnim();
+    playCompleteChime();
+
+    if(state.mode.type === 'free' && state.currentWordStartTime){
+      state.stepDurations[state.currentStepIndex] = Date.now() - state.currentWordStartTime;
+    }
+
+    state.combo = (state.combo||0) + 1;
+    state.wordsDone++;
+    if(state.combo > state.bestComboRun) state.bestComboRun = state.combo;
+    state.multiplier = comboMultiplier(state.combo);
+    state.score += state.multiplier;
+    scoreValEl.textContent = state.score;
+    if(state.mode.challenge && !state.challengeHit && state.score >= state.mode.challenge){
+      state.challengeHit = true;
+      showToast('🎯 Challenge beaten!');
+      track('challenge_beaten', { beat: state.mode.challenge });
+    }
+    updateComboDisplay();
+    updateFlameState();
+    checkComboMilestones();
+
+    state.typed = "";
+    state.locked = true;
+
+    const groupActive = document.getElementById('stepsGroupActive');
+    const groupBehind = document.getElementById('stepsGroupBehind');
+    if(groupActive){
+      groupActive.style.transition = 'transform 0.32s ease-in';
+      groupActive.style.transform = `translate(${-DEPTH_DX}px, ${RISER_H+DEPTH_DY}px)`;
+    }
+    if(groupBehind){
+      groupBehind.style.transition = 'transform 0.32s ease-in';
+      groupBehind.style.transform = `translate(${-DEPTH_DX*PARALLAX_BEHIND_FACTOR}px, ${(RISER_H+DEPTH_DY)*PARALLAX_BEHIND_FACTOR}px)`;
+    }
+
+    setTimeout(()=>{
+      state.currentStepIndex++;
+      state.locked = false;
+      const finished = (state.mode.type !== 'free') && (state.currentStepIndex >= (state.mode.type==='sequence'?state.mode.sequence.length:state.mode.count));
+      buildScene();
+      if(finished){ levelComplete(); return; }
+      startTimerForStep();
+    }, 320);
+  }
+
+  // Revive pricing ramps up with each revive used in the current run.
+  const REVIVE_BASE_COST = 20, REVIVE_COST_STEP = 15;
+  function reviveCost(){ return REVIVE_BASE_COST + (state.revivesUsed||0)*REVIVE_COST_STEP; }
+
+  // Bright, clearly-audible "wrong" buzzer — sits in the mid range (not bass) so it cuts
+  // through and reads as a distinct notification, unlike the soft ascending success chime.
+  function playFailSound(){
+    const ctx = ensureAudio();
+    if(!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [ {f:392, d:0.13}, {f:262, d:0.20} ]; // two dissonant square-wave blips, descending
+    notes.forEach((n,i)=>{
+      const t = now + i*0.085;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(n.f, t);
+      osc.connect(gain); gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.45, t+0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t+n.d);
+      osc.start(t);
+      osc.stop(t+n.d+0.02);
+    });
+  }
+
+  function onFail(){
+    playFailSound();
+    // brief invisible cooldown: if you're typing fast and don't notice a mistake right away,
+    // this stops the next rapid keystrokes from also registering as fresh failures.
+    state.inputLockedUntil = Date.now() + 500;
+    clearTimeout(state.timerHandle);
+    stairScene.classList.add('shake');
+    setTimeout(()=>stairScene.classList.remove('shake'), 300);
+    state.lives--;
+    renderHearts();
+    state.typed = "";
+    state.combo = 0;
+    state.multiplier = 1;
+    updateComboDisplay();
+    updateFlameState();
+    if(state.lives <= 0){
+      // Free Mode stays purely competitive — no paid revives there. Learn Mode levels can
+      // be revived with coins (or a free-revive earned from a combo streak this run).
+      if(state.mode.type !== 'free'){ offerRevive(); }
+      else { endGame(false); }
+    }
+    else { renderWordBanner(); startTimerForStep(); }
+  }
+
+  function offerRevive(){
+    clearTimeout(state.timerHandle);
+    document.getElementById('reviveScoreShown').textContent = state.currentStepIndex;
+    const desc = document.getElementById('reviveDesc');
+    const btn = document.getElementById('reviveAcceptBtn');
+    if(state.freeRevives > 0){
+      desc.textContent = 'You earned a free revive from your combo streak!';
+      btn.textContent = 'REVIVE (FREE)';
+      btn.classList.remove('locked');
+    } else {
+      const cost = reviveCost();
+      desc.textContent = 'Pay coins to get back up and keep climbing?';
+      btn.textContent = `REVIVE (🪙${cost})`;
+      if(save.coins < cost) btn.classList.add('locked'); else btn.classList.remove('locked');
+    }
+    reviveScreen.classList.remove('hidden');
+  }
+
+  function acceptRevive(){
+    if(state.freeRevives > 0){
+      state.freeRevives -= 1;
+    } else {
+      const cost = reviveCost();
+      if(save.coins < cost) return;
+      save.coins -= cost;
+      persistSave();
+      refreshHud();
+    }
+    state.revivesUsed = (state.revivesUsed||0) + 1;
+    state.lives = 1;
+    reviveScreen.classList.add('hidden');
+    renderHearts();
+    renderWordBanner();
+    startTimerForStep();
+  }
+
+  function declineRevive(){
+    reviveScreen.classList.add('hidden');
+    endGame(false);
+  }
+
+  document.getElementById('reviveAcceptBtn').addEventListener('click', acceptRevive);
+  document.getElementById('reviveDeclineBtn').addEventListener('click', declineRevive);
+
+  function endGame(won){
+    state.running = false;
+    clearTimeout(state.timerHandle);
+    syncWind();
+    climberEl.classList.remove('idle','stepping');
+    climberEl.classList.add(won ? 'landed' : 'falling');
+    if(ghostMarkerEl) ghostMarkerEl.style.opacity = '0';
+    setTimeout(()=>finishEndGame(won), won ? 420 : 600);
+  }
+
+  function finishEndGame(won){
+    let xpGain=0, coinGain=0, starText="";
+
+    if(state.mode.type === 'free'){
+      xpGain = state.score;
+      coinGain = Math.floor(state.score/2);
+      const isNewBest = state.score > save.bestScoreFree;
+      if(isNewBest){
+        save.bestScoreFree = state.score;
+        save.bestFreeStepDurations = state.stepDurations.slice();
+      }
+      endTitle.innerHTML = 'YOU <span>FELL</span>';
+      endSub.textContent = 'steps climbed';
+      const elapsedSec = Math.max(1, (Date.now() - (state.startTime||Date.now())) / 1000);
+      const stepsPerSecond = state.currentStepIndex / elapsedSec;
+      submitLeaderboardScore(stepsPerSecond, state.score);
+    } else if(won){
+      const stars = Math.min(3, state.lives);
+      const prevStars = save.levelStars[state.mode.levelId] || 0;
+      if(stars > prevStars) save.levelStars[state.mode.levelId] = stars;
+      if(state.mode.levelId === save.unlockedLevel && save.unlockedLevel < LEVELS.length){
+        save.unlockedLevel = state.mode.levelId + 1;
+      }
+      const firstClear = !save.completedLevels[state.mode.levelId];
+      save.completedLevels[state.mode.levelId] = true;
+      xpGain = 15 + stars*5;
+      coinGain = 10 + stars*5;
+      if(!firstClear){
+        xpGain = Math.max(4, Math.round(xpGain*0.35));
+        coinGain = Math.max(4, Math.round(coinGain*0.35));
+      }
+      starText = '★'.repeat(stars) + '☆'.repeat(3-stars);
+      endTitle.innerHTML = 'LEVEL <span>CLEAR</span>';
+      endSub.textContent = starText;
+    } else {
+      endTitle.innerHTML = 'YOU <span>FELL</span>';
+      endSub.textContent = 'steps climbed';
+    }
+
+    recordRunStats({
+      mode: state.mode.type, won: !!won && state.mode.type !== 'free',
+      words: state.wordsDone, keysCorrect: state.keysCorrect, keysWrong: state.keysWrong,
+      seconds: Math.max(0, (Date.now() - (state.startTime||Date.now())) / 1000),
+      bestCombo: state.bestComboRun,
+      stepsPerSecond: state.mode.type === 'free'
+        ? state.currentStepIndex / Math.max(1, (Date.now() - (state.startTime||Date.now())) / 1000)
+        : 0
+    });
+    grantXP(xpGain);
+    grantCoins(coinGain);
+    persistSave();
+    const rewardMsgs = checkLevelRewards(true).concat(state.mode.type === 'free' ? checkFreeModeRewards(true) : []);
+    if(rewardMsgs.length) showToast(rewardMsgs.join('\n'));
+    refreshHud();
+    setHudPlaying(false);
+
+    finalScoreEl.textContent = state.score;
+    const reviveNote = state.revivesUsed ? `\nrevives used: ${state.revivesUsed}` : '';
+    let challengeNote = '';
+    if(state.mode.challenge){
+      challengeNote = state.score >= state.mode.challenge
+        ? `\n🎯 Challenge beaten (${state.mode.challenge})!`
+        : `\n🎯 Challenge missed by ${state.mode.challenge - state.score} step${state.mode.challenge - state.score === 1 ? '' : 's'}`;
+    }
+    endExtra.textContent = `+${xpGain} XP  ·  +${coinGain} coins` + (rewardMsgs.length ? '\n' + rewardMsgs.join('\n') : '') + reviveNote + challengeNote;
+    const runSecs = Math.max(1, (Date.now() - (state.startTime||Date.now())) / 1000);
+    lastRun = (state.mode.type === 'free' && state.score > 0)
+      ? { score: state.score, sps: state.currentStepIndex / runSecs, bestCombo: state.bestComboRun, lang: save.language }
+      : null;
+    document.getElementById('shareBtn').classList.toggle('hidden', !lastRun);
+    track('run_end', { mode: state.mode.type, score: state.score, won: !!won, lang: save.language });
+    endScreen.classList.remove('hidden');
+  }
+
+  function levelComplete(){ endGame(true); }
+
+  function startGame(mode){
+    mainMenu.classList.add('hidden');
+    levelSelect.classList.add('hidden');
+    shopScreen.classList.add('hidden');
+    endScreen.classList.add('hidden');
+    reviveScreen.classList.add('hidden');
+    climberEl.classList.remove('stepping','landed','falling');
+    climberEl.classList.add('idle');
+    climberEl.style.opacity = '';
+    climberEl.style.transform = '';
+    state = {
+      running:true, score:0, lives:3, combo:0, multiplier:1,
+      currentStepIndex:0, typed:"", timerHandle:null, startTime: Date.now(),
+      currentWordStartTime: null, stepDurations: [],
+      revivesUsed:0, freeRevives:0, claimedComboThisRun:{},
+      keysCorrect:0, keysWrong:0, wordsDone:0, bestComboRun:0,
+      inputLockedUntil: 0,
+      mode: Object.assign({ words: [], bags:{} }, mode)
+    };
+    syncWind();
+    setHudPlaying(true);
+    modeTagEl.textContent = mode.type === 'free' ? 'FREE' : (mode.label ? mode.label.toUpperCase() : '');
+    scoreValEl.textContent = "0";
+    renderHearts();
+    updateComboDisplay();
+    refreshHud();
+    buildScene();
+    startTimerForStep();
+  }
+
+  document.addEventListener('keydown', (e)=>{
+    if(!state || !state.running || state.locked) return;
+    if(!reviveScreen.classList.contains('hidden')) return;
+    if(state.inputLockedUntil && Date.now() < state.inputLockedUntil) return;
+    const isChar = e.key.length === 1 && /[a-zA-Z ]/.test(e.key);
+    if(!isChar) return;
+    const target = state.mode.words[state.currentStepIndex];
+    const expected = target[state.typed.length];
+    const got = e.key === ' ' ? ' ' : e.key.toLowerCase();
+    if(got === expected){
+      state.keysCorrect++;
+      state.typed += expected;
+      renderWordBanner();
+      if(state.typed.length === target.length) onCorrectStep();
+    } else { state.keysWrong++; onFail(); }
+  });
+
+  stageEl.addEventListener('mousemove', (e)=>{
+    const rect = stageEl.getBoundingClientRect();
+    const nx = (e.clientX - rect.left)/rect.width - 0.5;
+    const ny = (e.clientY - rect.top)/rect.height - 0.5;
+    stairScene.style.transform = `perspective(1200px) rotateY(${nx*7}deg) rotateX(${-ny*5}deg)`;
+  });
+
+  /* ---------- stop any active run before opening shop/gift/account/leaderboard ---------- */
+  function stopRunIfActive(){
+    if(state && state.running){
+      state.running = false;
+      clearTimeout(state.timerHandle);
+      syncWind();
+    }
+    setHudPlaying(false);
+  }
+
+  /* ---------- menus ---------- */
+  function renderGauge(container, size){
+    const R = size/2 - 8, cx = size/2, cy = size/2 + 2;
+    const need = xpToNext(save.level);
+    const pct = Math.min(100, Math.round((save.xp/need)*100));
+    container.innerHTML = `
+      <svg width="${size}" height="${size/1.7}" viewBox="0 0 ${size} ${size/1.7}">
+        <path d="M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${cx+R} ${cy}" fill="none" stroke="#232a3d" stroke-width="10" stroke-linecap="round"/>
+        <path d="M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${cx+R} ${cy}" fill="none" stroke="var(--glow)" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="${pct} 100"/>
+        <text x="${cx}" y="${cy-6}" text-anchor="middle" font-family="monospace" font-size="22" fill="var(--text)" font-weight="bold">${save.level}</text>
+      </svg>
+      <div class="gauge-label">${save.xp} / ${need} XP</div>`;
+  }
+
+  function refreshMenu(){
+    renderGauge(document.getElementById('menuGaugeWrap'), 160);
+    document.getElementById('menuCoins').textContent = save.coins;
+    document.getElementById('menuGems').textContent = save.gems;
+    document.getElementById('menuBest').textContent = save.bestScoreFree;
+    if(save.level < FREE_MODE_MIN_LEVEL){
+      document.getElementById('freeModeBtn').classList.add('locked');
+      freeLockMsg.textContent = `Free Mode unlocks at player level ${FREE_MODE_MIN_LEVEL} — you're level ${save.level}. Try Learn Mode to gain XP.`;
+    } else {
+      document.getElementById('freeModeBtn').classList.remove('locked');
+      freeLockMsg.textContent = "";
+    }
+    const banner = document.getElementById('challengeBanner');
+    if(banner){
+      if(pendingChallenge){
+        document.getElementById('challengeText').textContent =
+          `🎯 A friend climbed ${pendingChallenge.beat} steps in ${pendingChallenge.lang === 'fr' ? 'French' : 'English'}. Can you beat it?`;
+        banner.classList.remove('hidden');
+      } else banner.classList.add('hidden');
+    }
+    const note = document.getElementById('competitiveNote');
+    if(note){
+      note.textContent = currentUser
+        ? '🏆 Signed in — your best Free Mode run submits to the leaderboard automatically.'
+        : '🏆 Free Mode is the competitive mode — sign in to submit your run to the leaderboard.';
+    }
+  }
+
+  function openShop(){
+    stopRunIfActive();
+    mainMenu.classList.add('hidden');
+    buildShop();
+    shopScreen.classList.remove('hidden');
+  }
+  document.getElementById('menuShopBtn').addEventListener('click', openShop);
+  document.getElementById('menuAuthBtn').addEventListener('click', openAccount);
+  document.getElementById('menuLeaderboardBtn').addEventListener('click', ()=>{
+    stopRunIfActive();
+    mainMenu.classList.add('hidden');
+    document.getElementById('leaderboardScreen').classList.remove('hidden');
+    loadLeaderboard(save.language);
+  });
+
+  document.getElementById('challengeAcceptBtn').addEventListener('click', ()=>{
+    if(!pendingChallenge) return;
+    const ch = pendingChallenge;
+    if(save.language !== ch.lang){
+      save.language = ch.lang;
+      persistSave();
+      showToast(ch.lang === 'fr' ? 'Langue réglée sur le français pour ce défi' : 'Typing language set to English for this challenge');
+    }
+    pendingChallenge = null;
+    try{ history.replaceState(null, '', location.href.split(/[?#]/)[0]); }catch(e){}
+    track('challenge_accepted', { beat: ch.beat, lang: ch.lang });
+    startGame({ type:'free', challenge: ch.beat });
+  });
+
+  document.getElementById('freeModeBtn').addEventListener('click', ()=>{
+    if(save.level < FREE_MODE_MIN_LEVEL) return;
+    startGame({ type:'free' });
+  });
+
+  function buildLevelSelect(){
+    const wrap = document.getElementById('levelListWrap');
+    wrap.innerHTML = "";
+    let lastWorld = null;
+    LEVELS.forEach((lvl)=>{
+      if(lvl.world !== lastWorld){
+        lastWorld = lvl.world;
+        const header = document.createElement('div');
+        header.className = 'world-header';
+        header.textContent = WORLD_NAMES[lvl.world] || ('World ' + lvl.world);
+        wrap.appendChild(header);
+      }
+      const locked = lvl.id > save.unlockedLevel;
+      const stars = save.levelStars[lvl.id] || 0;
+      const btn = document.createElement('div');
+      btn.className = 'level-btn' + (locked ? ' locked' : '');
+      const starDisplay = lvl.id <= save.unlockedLevel && lvl.id !== save.unlockedLevel
+        ? `<span class="level-stars">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</span>`
+        : (locked ? '🔒' : '<span class="level-stars">▶ PLAY</span>');
+      btn.innerHTML = `<div>${lvl.name}<small>${lvl.desc}</small></div>${starDisplay}`;
+      if(!locked){
+        btn.addEventListener('click', ()=>{
+          let sequence = lvl.sequence;
+          let type = lvl.type;
+          if(lvl.type === 'shuffleSequence'){
+            sequence = shuffleArray(lvl.base.slice());
+            type = 'sequence';
+          }
+          startGame({ type, sequence, pool: lvl.pool, count: lvl.count,
+                      time: lvl.time, timeDecay: lvl.timeDecay, label: lvl.name, levelId: lvl.id });
+        });
+      }
+      wrap.appendChild(btn);
+    });
+  }
+
+  document.getElementById('learnModeBtn').addEventListener('click', ()=>{
+    mainMenu.classList.add('hidden');
+    buildLevelSelect();
+    levelSelect.classList.remove('hidden');
+  });
+  document.getElementById('backToMenuBtn').addEventListener('click', ()=>{
+    levelSelect.classList.add('hidden');
+    refreshMenu();
+    mainMenu.classList.remove('hidden');
+  });
+  document.getElementById('menuBtn').addEventListener('click', ()=>{
+    if(state){ state.running = false; clearTimeout(state.timerHandle); }
+    syncWind();
+    setHudPlaying(false);
+    endScreen.classList.add('hidden');
+    levelSelect.classList.add('hidden');
+    shopScreen.classList.add('hidden');
+    reviveScreen.classList.add('hidden');
+    refreshMenu();
+    mainMenu.classList.remove('hidden');
+  });
+  document.getElementById('retryBtn').addEventListener('click', ()=>{
+    const m = state.mode;
+    startGame(m.type === 'free' ? {type:'free', challenge:m.challenge} :
+      { type:m.type, sequence:m.sequence, pool:m.pool, count:m.count, time:m.time, timeDecay:m.timeDecay, label:m.label, levelId:m.levelId });
+  });
+  document.getElementById('shareBtn').addEventListener('click', async ()=>{
+    if(!lastRun) return;
+    const base = location.href.split(/[?#]/)[0];
+    const link = `${base}?beat=${lastRun.score}&lang=${lastRun.lang}`;
+    const text = `ASCENT 🧗 ${lastRun.score} steps · ${lastRun.sps.toFixed(1)}/s · 🔥 combo ${lastRun.bestCombo}\nBeat me: ${link}`;
+    track('share_click', { score: lastRun.score, lang: lastRun.lang });
+    try{
+      if(navigator.share){ await navigator.share({ text }); return; }
+    }catch(e){ if(e && e.name === 'AbortError') return; }
+    try{ await navigator.clipboard.writeText(text); showToast('📋 Copied — paste it to a friend!'); }
+    catch(e){ window.prompt('Copy this and send it to a friend:', text); }
+  });
+  document.getElementById('toMenuBtn').addEventListener('click', ()=>{
+    endScreen.classList.add('hidden');
+    refreshMenu();
+    mainMenu.classList.remove('hidden');
+  });
+
+  /* ---------- shop ---------- */
+  let shopTab = 'character';
+  function buildShop(){
+    const grid = document.getElementById('shopGrid');
+    grid.innerHTML = "";
+    const list = shopTab === 'character' ? CHAR_SKINS : shopTab === 'stairs' ? STAIR_SKINS : BACKDROPS;
+    const owned = shopTab === 'character' ? save.ownedCharSkins : shopTab === 'stairs' ? save.ownedStairSkins : save.ownedBackdrops;
+    const equipped = shopTab === 'character' ? save.equippedCharSkin : shopTab === 'stairs' ? save.equippedStairSkin : save.equippedBackdrop;
+
+    function renderCard(item){
+      const isOwned = owned.includes(item.id);
+      const isEquipped = equipped === item.id;
+      const isLocked = !isOwned && !!item.unlock;
+      const isGemItem = !isOwned && !item.unlock && item.gemCost > 0;
+      const card = document.createElement('div');
+      card.className = 'shop-item';
+      let swatchColor;
+      if(shopTab==='character') swatchColor = item.torso;
+      else if(shopTab==='stairs') swatchColor = `linear-gradient(180deg, ${item.treadEdge}, ${item.tread})`;
+      else swatchColor = item.id==='sky' ? 'linear-gradient(180deg,#7fc4f2,#eaf6ff)' : item.id==='aurora' ? 'linear-gradient(180deg,#2b1f4d,#0a0d16)' : item.id==='aetherial' ? 'linear-gradient(180deg,#ff9d6c,#7f7fb8)' : 'linear-gradient(180deg,#131829,#0a0d16)';
+      let btnLabel, btnClass;
+      if(isEquipped){ btnLabel='Equipped'; btnClass='equipped'; }
+      else if(isOwned){ btnLabel='Equip'; btnClass=''; }
+      else if(isLocked){ btnLabel='Locked'; btnClass='locked-reward'; }
+      else if(isGemItem){ btnLabel='Buy'; btnClass='buy-gem'; }
+      else { btnLabel='Buy'; btnClass='buy'; }
+      const unlockNote = isLocked
+        ? `<div class="unlock-note">${item.unlock.type==='freeScore' ? `Reach ${item.unlock.value} steps in Free Mode to unlock` : item.unlock.type==='combo' ? `Hit a ${item.unlock.value}-word combo streak to unlock` : `Clear Level ${item.unlock.id} to unlock`}</div>`
+        : '';
+      const priceLabel = (!isOwned && !isLocked)
+        ? (isGemItem ? ` · 💎${item.gemCost}` : (item.cost>0 ? ` · 🪙${item.cost}` : ''))
+        : '';
+      card.innerHTML = `
+        <div class="shop-swatch${isGemItem?' shine':''}" style="background:${swatchColor}"></div>
+        <div class="name">${item.name}${item.sound?' 🔊':''}${priceLabel}</div>
+        ${unlockNote}
+        <button class="${btnClass}" ${isLocked?'disabled':''}>${btnLabel}</button>`;
+      if(!isLocked){
+        card.querySelector('button').addEventListener('click', ()=>{
+          if(isEquipped) return;
+          if(!isOwned){
+            if(isGemItem){
+              if(save.gems < item.gemCost) return;
+              save.gems -= item.gemCost;
+            } else {
+              if(save.coins < item.cost) return;
+              save.coins -= item.cost;
+            }
+            owned.push(item.id);
+          }
+          if(shopTab==='character'){ save.equippedCharSkin = item.id; applyCharSkin(item.id); }
+          else if(shopTab==='stairs'){ save.equippedStairSkin = item.id; applyBackdrop(save.equippedBackdrop); }
+          else { save.equippedBackdrop = item.id; applyBackdrop(item.id); }
+          persistSave();
+          refreshHud();
+          buildShop();
+        });
+      }
+      grid.appendChild(card);
+    }
+
+    const shopItems = list.filter(i=>!i.unlock);
+    const levelItems = list.filter(i=>i.unlock);
+    shopItems.forEach(renderCard);
+    if(levelItems.length){
+      const divider = document.createElement('div');
+      divider.className = 'shop-divider';
+      divider.textContent = '🏆 Unlockable Rewards';
+      grid.appendChild(divider);
+      levelItems.forEach(renderCard);
+    }
+  }
+  document.getElementById('shopBtn').addEventListener('click', openShop);
+  document.getElementById('authBtn').addEventListener('click', openAccount);
+  document.getElementById('leaderboardBtn').addEventListener('click', ()=>{
+    stopRunIfActive();
+    mainMenu.classList.add('hidden');
+    document.getElementById('leaderboardScreen').classList.remove('hidden');
+    loadLeaderboard(save.language);
+  });
+  document.getElementById('lbTabEn').addEventListener('click', ()=>loadLeaderboard('en'));
+  document.getElementById('lbTabFr').addEventListener('click', ()=>loadLeaderboard('fr'));
+  document.getElementById('leaderboardBackBtn').addEventListener('click', ()=>{
+    document.getElementById('leaderboardScreen').classList.add('hidden');
+    refreshMenu();
+    mainMenu.classList.remove('hidden');
+  });
+  document.getElementById('shopBackBtn').addEventListener('click', ()=>{
+    shopScreen.classList.add('hidden');
+    refreshMenu();
+    mainMenu.classList.remove('hidden');
+  });
+  document.getElementById('tabCharacter').addEventListener('click', ()=>{
+    shopTab='character';
+    document.getElementById('tabCharacter').classList.add('active');
+    document.getElementById('tabStairs').classList.remove('active');
+    document.getElementById('tabBackdrop').classList.remove('active');
+    buildShop();
+  });
+  document.getElementById('tabStairs').addEventListener('click', ()=>{
+    shopTab='stairs';
+    document.getElementById('tabStairs').classList.add('active');
+    document.getElementById('tabCharacter').classList.remove('active');
+    document.getElementById('tabBackdrop').classList.remove('active');
+    buildShop();
+  });
+  document.getElementById('tabBackdrop').addEventListener('click', ()=>{
+    shopTab='backdrop';
+    document.getElementById('tabBackdrop').classList.add('active');
+    document.getElementById('tabCharacter').classList.remove('active');
+    document.getElementById('tabStairs').classList.remove('active');
+    buildShop();
+  });
+
+  /* ---------- gift screen ---------- */
+  function openGifts(){
+    stopRunIfActive();
+    mainMenu.classList.add('hidden');
+    document.getElementById('giftInput').value = '';
+    document.getElementById('giftStatusMsg').textContent = '';
+    document.getElementById('giftScreen').classList.remove('hidden');
+  }
+  document.getElementById('menuGiftBtn').addEventListener('click', openGifts);
+  document.getElementById('giftRedeemBtn').addEventListener('click', ()=>{
+    redeemGiftCode(document.getElementById('giftInput').value);
+  });
+  document.getElementById('giftInput').addEventListener('keydown', (e)=>{
+    e.stopPropagation();
+    if(e.key === 'Enter') document.getElementById('giftRedeemBtn').click();
+  });
+  document.getElementById('giftBackBtn').addEventListener('click', ()=>{
+    document.getElementById('giftScreen').classList.add('hidden');
+    refreshMenu();
+    mainMenu.classList.remove('hidden');
+  });
+
+  /* ---------- account screen ---------- */
+  const accountScreen = document.getElementById('accountScreen');
+  const nicknameInput = document.getElementById('nicknameInput');
+  const avatarCircle = document.getElementById('avatarCircle');
+  const leaderboardOptToggle = document.getElementById('leaderboardOptToggle');
+  const ghostToggle = document.getElementById('ghostToggle');
+  const translationToggle = document.getElementById('translationToggle');
+  const langEnBtn = document.getElementById('langEnBtn');
+  const langFrBtn = document.getElementById('langFrBtn');
+  const accountSignBtn = document.getElementById('accountSignBtn');
+  const accountStatusMsg = document.getElementById('accountStatusMsg');
+  const profileSub = document.getElementById('profileSub');
+
+  function displayName(){
+    return save.nickname || (currentUser ? (currentUser.displayName||'Player').split(' ')[0] : 'Guest');
+  }
+
+  function refreshLangButtons(){
+    if(!langEnBtn || !langFrBtn) return;
+    const enActive = save.language !== 'fr';
+    langEnBtn.style.background = enActive ? 'var(--glow)' : 'transparent';
+    langEnBtn.style.color = enActive ? '#0a0d16' : 'var(--text)';
+    langFrBtn.style.background = !enActive ? 'var(--glow)' : 'transparent';
+    langFrBtn.style.color = !enActive ? '#0a0d16' : 'var(--text)';
+  }
+  if(langEnBtn) langEnBtn.addEventListener('click', ()=>{
+    save.language = 'en';
+    persistSave();
+    refreshLangButtons();
+    showToast('Typing language set to English');
+  });
+  if(langFrBtn) langFrBtn.addEventListener('click', ()=>{
+    save.language = 'fr';
+    persistSave();
+    refreshLangButtons();
+    showToast('Langue de frappe réglée sur le français');
+  });
+  if(translationToggle) translationToggle.addEventListener('change', ()=>{
+    save.showTranslation = translationToggle.checked;
+    persistSave();
+    showToast(save.showTranslation ? '🌍 Translation hints on' : '🌍 Translation hints off');
+  });
+
+  function formatDuration(sec){
+    sec = Math.max(0, Math.round(sec));
+    const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
+    if(h > 0) return h + 'h ' + m + 'm';
+    if(m > 0) return m + 'm';
+    return sec + 's';
+  }
+  function renderStats(){
+    const st = save.stats || defaultStats();
+    const keys = st.keysCorrect + st.keysWrong;
+    const set = (id, v)=>{ const el = document.getElementById(id); if(el) el.textContent = v; };
+    set('stRuns', st.runs);
+    set('stWords', st.words.toLocaleString());
+    set('stAccuracy', keys > 0 ? Math.round(st.keysCorrect / keys * 100) + '%' : '–');
+    // standard WPM definition: 5 characters = 1 word, over time actually spent in runs
+    set('stWpm', st.playSeconds >= 10 ? Math.round((st.keysCorrect / 5) / (st.playSeconds / 60)) : '–');
+    set('stCombo', st.bestCombo);
+    set('stSps', st.bestStepsPerSec > 0 ? st.bestStepsPerSec.toFixed(2) : '–');
+    set('stLevels', Object.keys(save.completedLevels || {}).length);
+    set('stTime', formatDuration(st.playSeconds));
+    // a streak only counts if you played today or yesterday — otherwise it has lapsed
+    const today = todayKey();
+    const alive = st.lastPlayDay && dayDiff(st.lastPlayDay, today) <= 1;
+    set('stStreak', alive ? st.dayStreak : 0);
+    set('stLongest', st.longestDayStreak);
+    set('stSince', 'Tracking since ' + new Date(st.firstPlayed).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }));
+  }
+
+  function refreshAccountScreen(){
+    renderStats();
+    const skin = CHAR_SKINS.find(s=>s.id===save.equippedCharSkin) || CHAR_SKINS[0];
+    avatarCircle.style.background = skin.torso;
+    avatarCircle.textContent = displayName().charAt(0).toUpperCase() || '?';
+    if(document.activeElement !== nicknameInput) nicknameInput.value = save.nickname || '';
+    renderGauge(document.getElementById('accountGaugeWrap'), 150);
+    document.getElementById('accountCoins').textContent = save.coins;
+    document.getElementById('accountGems').textContent = save.gems;
+    document.getElementById('accountBest').textContent = save.bestScoreFree;
+
+    leaderboardOptToggle.checked = !save.leaderboardOptOut;
+    leaderboardOptToggle.disabled = !currentUser;
+    ghostToggle.checked = !!save.showGhost;
+    if(translationToggle) translationToggle.checked = !!save.showTranslation;
+    refreshLangButtons();
+
+    if(currentUser){
+      profileSub.textContent = `Signed in as ${currentUser.email || currentUser.displayName || 'your Google account'} · cloud saved`;
+      accountSignBtn.textContent = 'SIGN OUT';
+      accountSignBtn.classList.add('secondary');
+      accountStatusMsg.style.color = 'var(--glow)';
+      accountStatusMsg.textContent = save.leaderboardOptOut
+        ? "You're hidden from the public leaderboard. Flip the toggle above any time to appear. If your name matches another player, the board shows a short tag so you can tell each other apart."
+        : "You're visible on the public leaderboard under your nickname. If your name matches another player, the board shows a short tag so you can tell each other apart.";
+    } else {
+      profileSub.textContent = 'Not signed in — progress is only saved on this device.';
+      accountSignBtn.textContent = 'SIGN IN WITH GOOGLE';
+      accountSignBtn.classList.remove('secondary');
+      accountStatusMsg.style.color = 'var(--text-dim)';
+      accountStatusMsg.textContent = fbReady()
+        ? 'Sign in to back up your progress to the cloud and (optionally) join the leaderboard.'
+        : "Cloud accounts aren't configured for this game yet — your nickname and progress still save locally.";
+    }
+  }
+
+  function openAccount(){
+    stopRunIfActive();
+    mainMenu.classList.add('hidden');
+    refreshAccountScreen();
+    accountScreen.classList.remove('hidden');
+  }
+
+  document.getElementById('saveNicknameBtn').addEventListener('click', ()=>{
+    const val = nicknameInput.value.trim().slice(0,16);
+    save.nickname = val || null;
+    persistSave();
+    refreshAccountScreen();
+    refreshAuthUI();
+    showToast(val ? `Nickname set to "${val}"` : 'Nickname cleared');
+  });
+  nicknameInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') document.getElementById('saveNicknameBtn').click();
+    e.stopPropagation();
+  });
+
+  leaderboardOptToggle.addEventListener('change', ()=>{
+    save.leaderboardOptOut = !leaderboardOptToggle.checked;
+    persistSave();
+    if(save.leaderboardOptOut) removeFromLeaderboard();
+    refreshAccountScreen();
+    showToast(save.leaderboardOptOut ? '🙈 Hidden from the public leaderboard' : '🏆 Visible on the public leaderboard');
+  });
+
+  ghostToggle.addEventListener('change', ()=>{
+    save.showGhost = ghostToggle.checked;
+    persistSave();
+    updateGhostMarker();
+    showToast(save.showGhost ? '👻 Pace ghost turned on' : '👻 Pace ghost turned off');
+  });
+
+  accountSignBtn.addEventListener('click', ()=>{
+    if(currentUser) signOutUser(); else signIn();
+  });
+  document.getElementById('accountBackBtn').addEventListener('click', ()=>{
+    accountScreen.classList.add('hidden');
+    refreshMenu();
+    mainMenu.classList.remove('hidden');
+  });
+
+  /* ---------- boot ---------- */
+  applyCharSkin(save.equippedCharSkin);
+  applyBackdrop(save.equippedBackdrop);
+  renderHearts();
+  refreshHud();
+  refreshMenu();
+  refreshAuthUI();
+  backfillCompletedLevels();
+  checkLevelRewards();
+  checkFreeModeRewards();
+  initMobileGate();
+  startEmbers();
+})();
+</script>
+</body>
+</html>
