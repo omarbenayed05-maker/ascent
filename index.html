@@ -14,7 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500;700&display=swap');
   :root{
     --bg-deep:#0a0d16; --bg-mid:#131829;
     --tread:#2a3350; --tread-edge:#3a4568; --riser:#141a2c; --riser-edge:#1d2440;
@@ -393,6 +393,161 @@
   #giftInput{ width:280px; background:var(--bg-deep); border:1px solid var(--panel-border); border-radius:8px; padding:11px 12px; font-family:var(--mono); font-size:13px; color:var(--text); text-align:center; text-transform:lowercase; }
   #giftInput:focus{ outline:none; border-color:var(--glow); }
   #gemsTag{ display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:12px; color:#c9a8ff; }
+
+  /* =====================================================================
+     Glass look — surfaces are translucent and tinted by the equipped
+     shop theme (backdrop), so the whole UI blends into it.
+     ===================================================================== */
+  :root{
+    --sans:'Bricolage Grotesque','Segoe UI',system-ui,-apple-system,sans-serif;
+    --display:'Bricolage Grotesque','Segoe UI',system-ui,-apple-system,sans-serif;
+    --veil:#070a12;
+    --glass:rgba(22,29,50,0.46);
+    --glass-solid:rgba(24,31,52,0.92);
+    --glass-line:rgba(255,255,255,0.12);
+    --glass-hi:rgba(255,255,255,0.10);
+    --glass-shadow:0 22px 48px -18px rgba(0,0,0,0.55);
+    --r-lg:22px; --r-md:14px; --r-sm:10px;
+  }
+  /* declared on body so each theme class below re-resolves them */
+  body{ --panel-bg:var(--glass); --panel-border:var(--glass-line); }
+  body.theme-sky{ --veil:#bcd6ec; --glass:rgba(255,255,255,0.30); --glass-solid:rgba(240,247,253,0.94); --glass-line:rgba(255,255,255,0.62); --glass-hi:rgba(255,255,255,0.7); --glass-shadow:0 22px 48px -20px rgba(24,60,104,0.45); }
+  body.theme-dusk{ --veil:#2a1226; --glass:rgba(54,22,48,0.42); --glass-solid:rgba(48,20,44,0.92); --glass-line:rgba(255,226,208,0.20); }
+  body.theme-aurora{ --veil:#0a0a1c; --glass:rgba(26,22,58,0.46); --glass-solid:rgba(24,20,54,0.92); --glass-line:rgba(215,200,255,0.18); }
+  body.theme-aetherial{ --veil:#f6d9c4; --glass:rgba(255,255,255,0.30); --glass-solid:rgba(252,241,234,0.94); --glass-line:rgba(255,255,255,0.6); --glass-hi:rgba(255,255,255,0.65); --glass-shadow:0 22px 48px -20px rgba(70,50,110,0.45); }
+  /* --accent-ui is what charts, meters and bars use: the stair-skin glow is a pale pastel on the light themes, so they get a deeper tone */
+  body{ --accent-ui:var(--glow); --accent-2:var(--amber); }
+  body.theme-sky{ --accent-ui:#2f7d3a; --accent-2:#d9631e; }
+  body.theme-aetherial{ --accent-ui:#6a45b5; --accent-2:#d9541e; }
+  body.theme-sky .overlay{ --text:#14263b; --text-dim:#3d5574; }
+  body.theme-aetherial .overlay{ --text:#2b2347; --text-dim:#5a4f7d; }
+
+  /* default (Void) background: two soft colour washes taken from the equipped stair skin and amber */
+  #app{ isolation:isolate; background:
+      radial-gradient(70% 55% at 12% 0%, color-mix(in srgb, var(--glow) 27%, transparent), transparent 70%),
+      radial-gradient(60% 50% at 100% 100%, color-mix(in srgb, var(--amber) 21%, transparent), transparent 72%),
+      linear-gradient(180deg, #0d1322, #080b14); }
+
+  /* the stage vignette fades in from the top so it doesn't draw a hard line across the background */
+  #vignette{ background:radial-gradient(ellipse at 50% 35%, transparent 50%, rgba(0,0,0,0.45) 100%);
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 28%); mask-image:linear-gradient(to bottom, transparent 0, #000 28%); }
+  /* behind menus and settings screens show only the themed background, not a blurred ghost of the game */
+  #app:has(.overlay:not(.hidden):not(#endScreen):not(#reviveScreen)) :is(#hud,#wordZone,#prompt,#stairScene,#emberLayer){ visibility:hidden; }
+
+  /* the veil that sits over the game when a screen is open */
+  .overlay{ background:rgba(7,10,18,0.55); background:color-mix(in srgb, var(--veil) 34%, transparent);
+    -webkit-backdrop-filter:blur(14px) saturate(125%); backdrop-filter:blur(14px) saturate(125%); gap:14px; color:var(--text); }
+  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+    .overlay{ background:color-mix(in srgb, var(--veil) 88%, transparent); }
+  }
+  .overlay h1{ font-family:var(--display); font-weight:700; font-size:30px; letter-spacing:-0.015em; text-transform:lowercase; }
+  .overlay h1::first-letter{ text-transform:uppercase; }
+  .overlay h1 span{ color:inherit; }
+  .overlay p{ font-size:13.5px; line-height:1.55; }
+
+  /* ---- buttons ---- */
+  button.cta{ font-family:var(--sans); font-weight:700; font-size:12.5px; letter-spacing:0.07em; padding:12px 20px; border-radius:var(--r-md);
+    background:var(--glow); color:#0a120f; border:1px solid color-mix(in srgb, var(--glow) 55%, white);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.35), 0 8px 18px -10px rgba(0,0,0,0.6);
+    transition:transform 0.15s, background 0.15s, border-color 0.15s; }
+  button.cta:hover{ transform:translateY(-1px); }
+  button.cta.secondary{ background:rgba(255,255,255,0.07); color:var(--text); border:1px solid var(--glass-line);
+    box-shadow:inset 0 1px 0 var(--glass-hi); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+  button.cta.secondary:hover{ background:rgba(255,255,255,0.13); }
+  body.theme-sky button.cta.secondary, body.theme-aetherial button.cta.secondary{ background:rgba(255,255,255,0.4); }
+  body.theme-sky button.cta.secondary:hover, body.theme-aetherial button.cta.secondary:hover{ background:rgba(255,255,255,0.6); }
+  button.cta.locked{ background:rgba(255,255,255,0.06); color:var(--text-dim); border:1px dashed var(--glass-line); box-shadow:none; }
+  button.cta.small{ padding:7px 14px; font-size:11.5px; border-radius:11px; }
+
+  /* ---- icons ---- */
+  .ic{ width:16px; height:16px; flex:none; display:inline-block; vertical-align:-3px; }
+  .ic-coin{ color:var(--coin); } .ic-gem{ color:#b98cff; }
+  body.theme-sky .overlay .ic-coin, body.theme-aetherial .overlay .ic-coin{ color:#c98a00; }
+  body.theme-sky .overlay .ic-gem, body.theme-aetherial .overlay .ic-gem{ color:#8250d6; }
+  .chip{ display:inline-flex; align-items:center; gap:7px; padding:6px 12px 6px 9px; border-radius:999px; background:var(--glass);
+    border:1px solid var(--glass-line); box-shadow:inset 0 1px 0 var(--glass-hi); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+    font-family:var(--mono); font-weight:600; font-size:12px; color:var(--text); }
+
+  /* ---- main menu ---- */
+  #mainMenu{ gap:0; }
+  .menu-shell{ width:min(460px,100%); display:flex; flex-direction:column; gap:16px; text-align:left; }
+  .menu-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 4px; }
+  .wordmark{ display:flex; align-items:center; gap:10px; font-family:var(--display); font-weight:800; font-size:28px; letter-spacing:-0.03em; line-height:1; color:var(--text); }
+  .wordmark .mark{ width:26px; height:26px; color:var(--accent-ui); }
+  .menu-hud{ margin:0; gap:8px; justify-content:flex-end; }
+  .menu-card{ position:relative; padding:22px 22px 18px; border-radius:var(--r-lg); display:flex; flex-direction:column; gap:14px;
+    background:linear-gradient(155deg, rgba(255,255,255,0.10), rgba(255,255,255,0) 42%), var(--glass);
+    border:1px solid var(--glass-line); box-shadow:var(--glass-shadow), inset 0 1px 0 var(--glass-hi);
+    -webkit-backdrop-filter:blur(18px) saturate(140%); backdrop-filter:blur(18px) saturate(140%); }
+  .lvl{ display:flex; justify-content:space-between; align-items:baseline; font-family:var(--sans); font-size:13px; color:var(--text-dim); }
+  .lvl b{ font-family:var(--mono); font-size:15px; color:var(--text); margin-left:4px; }
+  .lvl-track{ height:4px; border-radius:2px; background:rgba(255,255,255,0.14); overflow:hidden; margin-top:8px; }
+  .lvl-track i{ display:block; height:100%; border-radius:2px; background:var(--accent-ui); }
+  .menu-card .menu-lede{ max-width:none; text-align:left; margin:0; }
+  .menu-actions{ display:grid; grid-template-columns:1.25fr 1fr; gap:10px; }
+  .menu-actions button.cta{ display:flex; flex-direction:column; align-items:flex-start; gap:3px; text-align:left; padding:14px 16px; text-transform:none; letter-spacing:0; }
+  .menu-actions button.cta b{ font-size:16px; font-weight:700; }
+  .menu-actions button.cta small{ font-size:11.5px; font-weight:500; opacity:0.72; }
+  .menu-card #freeLockMsg, .menu-card #competitiveNote{ max-width:none; margin:0; text-align:left; font-size:12px; color:var(--text-dim); }
+  .menu-card #freeLockMsg:empty{ display:none; }
+  .menu-links{ display:flex; justify-content:space-between; gap:2px; padding:0 2px; flex-wrap:wrap; }
+  .nav-link{ display:inline-flex; align-items:center; gap:7px; background:none; border:none; color:var(--text-dim); font-family:var(--sans); font-weight:600; font-size:13px;
+    padding:9px 11px; border-radius:11px; cursor:pointer; transition:background 0.15s, color 0.15s; }
+  .nav-link:hover{ color:var(--text); background:var(--glass); }
+  .nav-link .ic{ width:17px; height:17px; vertical-align:middle; }
+  .nav-label{ display:inline-block; text-transform:lowercase; }
+  .nav-label::first-letter{ text-transform:uppercase; }
+  .challenge-banner{ width:100%; border:1px solid var(--glass-line); box-shadow:inset 3px 0 0 var(--amber); background:rgba(255,184,77,0.10); border-radius:var(--r-md); }
+  @media (max-width:420px){ .menu-actions{ grid-template-columns:1fr; } .menu-links{ flex-wrap:nowrap; } .nav-link{ padding:9px 5px; gap:5px; font-size:12.5px; } .nav-link .ic{ width:16px; height:16px; } }
+
+  /* ---- in-game HUD ---- */
+  #hud .brand{ display:flex; align-items:center; gap:8px; font-family:var(--display); font-weight:800; font-size:16px; letter-spacing:-0.02em; text-transform:lowercase; color:var(--text); }
+  #hud .brand .mark{ width:18px; height:18px; color:var(--accent-ui); }
+  #playerBadge, #coinsTag, #gemsTag{ padding:4px 10px; border-radius:999px; background:var(--glass); border:1px solid var(--glass-line);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); gap:6px; }
+  #coinsTag, #gemsTag{ color:var(--text); }
+  #rewardToast{ background:var(--glass-solid); border:1px solid var(--glass-line); border-radius:var(--r-md); font-family:var(--sans); font-size:13px; font-weight:600;
+    padding:10px 16px; box-shadow:var(--glass-shadow); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+  body.theme-sky #rewardToast, body.theme-aetherial #rewardToast{ color:#14263b; }
+
+  /* ---- shop ---- */
+  .shop-grid{ width:min(380px,100%); }
+  .shop-item{ border-radius:var(--r-md); box-shadow:inset 0 1px 0 var(--glass-hi); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .shop-item .name{ font-family:var(--sans); font-weight:600; font-size:12.5px; display:flex; align-items:center; justify-content:center; gap:4px; flex-wrap:wrap; }
+  .shop-item .name .snd{ color:var(--text-dim); font-weight:400; }
+  .shop-item button{ font-family:var(--sans); font-weight:650; font-size:11.5px; padding:6px 12px; border-radius:9px; border:1px solid var(--glass-line); color:var(--text); }
+  .shop-item button.equipped{ background:var(--glow); color:#0a120f; border-color:transparent; }
+  .shop-item button.buy{ background:rgba(255,209,92,0.16); color:#ffd98a; border-color:rgba(255,209,92,0.4); }
+  .shop-item button.buy-gem{ background:rgba(185,140,255,0.16); color:#d6b8ff; border-color:rgba(185,140,255,0.4); }
+  body.theme-sky .shop-item button.buy, body.theme-aetherial .shop-item button.buy{ color:#6b4a00; background:rgba(255,200,70,0.35); }
+  body.theme-sky .shop-item button.buy-gem, body.theme-aetherial .shop-item button.buy-gem{ color:#4d2394; background:rgba(150,100,230,0.25); }
+  .shop-divider{ font-family:var(--sans); font-weight:600; letter-spacing:0.08em; color:var(--text-dim); }
+  .shop-tabs{ display:inline-flex; gap:2px; padding:3px; border-radius:12px; background:var(--glass); border:1px solid var(--glass-line);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .shop-tab{ border:none; border-radius:9px; padding:7px 16px; font-family:var(--sans); font-weight:600; font-size:13px; color:var(--text-dim); transition:background 0.15s, color 0.15s; }
+  .shop-tab:hover{ color:var(--text); }
+  .shop-tab.active{ color:var(--text); background:rgba(255,255,255,0.14); box-shadow:inset 0 1px 0 var(--glass-hi); }
+  body.theme-sky .shop-tab.active, body.theme-aetherial .shop-tab.active{ background:rgba(255,255,255,0.65); }
+
+  /* ---- lists, cards, inputs ---- */
+  .level-btn, .leaderboard-row, .profile-card, .st-tile, .st-card{ border-radius:var(--r-md); box-shadow:inset 0 1px 0 var(--glass-hi);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .level-btn{ font-family:var(--sans); font-weight:600; }
+  .world-header{ font-family:var(--sans); font-weight:600; color:var(--text-dim); letter-spacing:0.1em; }
+  .leaderboard-row{ font-family:var(--sans); }
+  .leaderboard-row .rank{ color:var(--text-dim); font-family:var(--mono); }
+  .leaderboard-row:nth-child(1) .rank{ color:var(--amber); }
+  .leaderboard-row .val{ color:var(--text); }
+  .st-chart .dot{ stroke:var(--glass-solid); fill:var(--accent-ui); }
+  .st-chart .line{ stroke:var(--accent-ui); } .st-chart .area{ fill:var(--accent-ui); }
+  .st-chart .bar, .st-chart .cell{ fill:var(--accent-ui); }
+  .st-chart .bar.today{ fill:var(--accent-2); } .st-chart .cell.now{ stroke:var(--accent-2); }
+  .st-meter i{ background:var(--accent-ui); } .st-meter{ background:color-mix(in srgb, var(--accent-ui) 18%, transparent); }
+  .st-legend i{ background:var(--accent-ui); }
+  /* on Aetherial the pastel glow makes a washed-out button, so primary buttons take the deeper tone */
+  body.theme-aetherial button.cta:not(.secondary):not(.locked), body.theme-aetherial .shop-item button.equipped{ background:var(--accent-ui); color:#fff; border-color:rgba(255,255,255,0.4); }
+  .nickname-input, #giftInput{ background:rgba(255,255,255,0.07); border:1px solid var(--glass-line); border-radius:11px; color:var(--text); }
+  body.theme-sky .nickname-input, body.theme-sky #giftInput, body.theme-aetherial .nickname-input, body.theme-aetherial #giftInput{ background:rgba(255,255,255,0.55); }
 </style>
 </head>
 <body>
@@ -405,18 +560,33 @@
   <button class="cta secondary small" id="mobileGateContinue" style="margin-top:4px;">CONTINUE ANYWAY</button>
 </div>
 
+<!-- icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-mark" viewBox="0 0 24 24"><rect x="2" y="15" width="6" height="7" rx="2" fill="currentColor" opacity="0.5"/><rect x="9" y="9" width="6" height="13" rx="2" fill="currentColor" opacity="0.75"/><rect x="16" y="2" width="6" height="20" rx="2" fill="currentColor"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><circle cx="12" cy="12" r="5.4" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="1.8"/></symbol>
+    <symbol id="i-gem" viewBox="0 0 24 24"><path d="M7 3.5h10l4.5 5.5L12 21 2.5 9z" fill="currentColor"/><path d="M2.5 9h19M9.5 3.5 8 9l4 12 4-12-1.5-5.5" fill="none" stroke="#000" stroke-opacity="0.25" stroke-width="1.2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-peak" viewBox="0 0 24 24"><path d="M2.5 20.5 9.5 8l4.2 7 2.8-4.5 5 10z" fill="currentColor"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8.5h14l-1 11.5H6z M9 8.5V7a3 3 0 0 1 6 0v1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3.5" y="9" width="17" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 9v11M3.5 13.5h17M12 9C10.5 5.5 6.5 6 7 8s3.500 1 5 1Zm0 0c1.500-3.500 5.500-3 5-1s-3.500 1-5 1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-steps" viewBox="0 0 24 24"><path d="M3.5 20.5v-5h5v-5h5v-5h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M3.5 20.5h17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity="0.5"/></symbol>
+    <symbol id="i-podium" viewBox="0 0 24 24"><rect x="2.500" y="12.500" width="6" height="8" rx="1.200" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="9" y="7" width="6" height="13.500" rx="1.200" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="15.500" y="14.500" width="6" height="6" rx="1.200" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.800" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.500 20.500c.8-4 3.800-6 7.500-6s6.700 2 7.500 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
 <div id="app">
 
   <div id="hud">
     <div class="left">
-      <div class="brand" id="menuBtn">ASC<span>ENT</span></div>
+      <div class="brand" id="menuBtn"><svg class="mark" aria-hidden="true"><use href="#i-mark"/></svg>ascent</div>
       <div id="playerBadge">LV <b id="playerLevelTag">1</b></div>
-      <div id="coinsTag">🪙<span id="coinsVal">0</span></div>
-      <div id="gemsTag">💎<span id="gemsVal">0</span></div>
+      <div id="coinsTag"><svg class="ic ic-coin" aria-hidden="true"><use href="#i-coin"/></svg><span id="coinsVal">0</span></div>
+      <div id="gemsTag"><svg class="ic ic-gem" aria-hidden="true"><use href="#i-gem"/></svg><span id="gemsVal">0</span></div>
       <div id="hudActions">
         <button id="shopBtn">SHOP</button>
         <button id="authBtn"><span class="authAvatar" id="authAvatarDot"></span><span id="authBtnLabel">ACCOUNT</span></button>
-        <button id="leaderboardBtn">🏆</button>
+        <button id="leaderboardBtn" aria-label="Leaderboard"><svg class="ic" aria-hidden="true"><use href="#i-podium"/></svg></button>
       </div>
     </div>
     <div id="hearts"></div>
@@ -453,29 +623,36 @@
   <div id="prompt">type the word above to climb</div>
 
   <div id="mainMenu" class="overlay">
-    <h1>ASC<span>ENT</span></h1>
-    <div class="menu-hud">
-      <div class="menu-hud-item">🪙 <span id="menuCoins">0</span></div>
-      <div class="menu-hud-item">💎 <span id="menuGems">0</span></div>
-      <div class="menu-hud-item">🏆 Best <span id="menuBest">0</span></div>
-      <button class="cta secondary small" id="menuShopBtn">SHOP</button>
-      <button class="cta secondary small" id="menuGiftBtn">GIFTS</button>
-      <button class="cta secondary small" id="menuAuthBtn">SIGN IN</button>
-      <button class="cta secondary small" id="menuLeaderboardBtn">🏆 BOARD</button>
-      <button class="cta secondary small" id="menuStatsBtn">📊 STATS</button>
+    <div class="menu-shell">
+      <div class="menu-top">
+        <div class="wordmark"><svg class="mark" aria-hidden="true"><use href="#i-mark"/></svg><span>ascent</span></div>
+        <div class="menu-hud">
+          <span class="chip"><svg class="ic ic-coin" aria-hidden="true"><use href="#i-coin"/></svg><span id="menuCoins">0</span></span>
+          <span class="chip"><svg class="ic ic-gem" aria-hidden="true"><use href="#i-gem"/></svg><span id="menuGems">0</span></span>
+        </div>
+      </div>
+      <section class="menu-card">
+        <div id="menuGaugeWrap"></div>
+        <p class="menu-lede">Type the word above each step to climb. Miss a letter or run out of time and you fall.</p>
+        <div class="challenge-banner hidden" id="challengeBanner">
+          <span id="challengeText"></span>
+          <button class="cta small" id="challengeAcceptBtn">ACCEPT</button>
+        </div>
+        <div class="menu-actions">
+          <button class="cta" id="freeModeBtn"><b>Free mode</b><small>Ranked · best <span id="menuBest">0</span></small></button>
+          <button class="cta secondary" id="learnModeBtn"><b>Learn mode</b><small>Levels and worlds</small></button>
+        </div>
+        <p id="freeLockMsg"></p>
+        <p id="competitiveNote"></p>
+      </section>
+      <nav class="menu-links">
+        <button class="nav-link" id="menuShopBtn"><svg class="ic" aria-hidden="true"><use href="#i-bag"/></svg><span class="nav-label">Shop</span></button>
+        <button class="nav-link" id="menuGiftBtn"><svg class="ic" aria-hidden="true"><use href="#i-gift"/></svg><span class="nav-label">Gifts</span></button>
+        <button class="nav-link" id="menuStatsBtn"><svg class="ic" aria-hidden="true"><use href="#i-steps"/></svg><span class="nav-label">Stats</span></button>
+        <button class="nav-link" id="menuLeaderboardBtn"><svg class="ic" aria-hidden="true"><use href="#i-podium"/></svg><span class="nav-label">Board</span></button>
+        <button class="nav-link" id="menuAuthBtn"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg><span class="nav-label">Sign in</span></button>
+      </nav>
     </div>
-    <div class="gauge-wrap" id="menuGaugeWrap"></div>
-    <p>Type the word above the stairs to climb higher. Miss a letter, or run out of time, and you fall. Chain words without missing to build a combo — big streaks earn bonus hearts, free revives, and rare skins.</p>
-    <div class="challenge-banner hidden" id="challengeBanner">
-      <span id="challengeText"></span>
-      <button class="cta small" id="challengeAcceptBtn">ACCEPT</button>
-    </div>
-    <div class="menu-row">
-      <button class="cta" id="freeModeBtn">FREE MODE 🏆</button>
-      <button class="cta secondary" id="learnModeBtn">LEARN MODE</button>
-    </div>
-    <p id="freeLockMsg" style="font-size:11px;"></p>
-    <p id="competitiveNote" style="font-size:11px; color:var(--amber);"></p>
   </div>
 
   <div id="levelSelect" class="overlay hidden">
@@ -488,8 +665,8 @@
   <div id="shopScreen" class="overlay hidden">
     <h1>SH<span>OP</span></h1>
     <div class="menu-hud">
-      <div class="menu-hud-item">🪙 <span id="coinsVal2">0</span></div>
-      <div class="menu-hud-item">💎 <span id="gemsVal2">0</span></div>
+      <span class="chip"><svg class="ic ic-coin" aria-hidden="true"><use href="#i-coin"/></svg><span id="coinsVal2">0</span></span>
+      <span class="chip"><svg class="ic ic-gem" aria-hidden="true"><use href="#i-gem"/></svg><span id="gemsVal2">0</span></span>
     </div>
     <div class="shop-tabs">
       <div class="shop-tab active" id="tabCharacter">Character</div>
@@ -525,9 +702,9 @@
     </div>
     <div class="gauge-wrap" id="accountGaugeWrap"></div>
     <div class="menu-hud">
-      <div class="menu-hud-item">🪙 <span id="accountCoins">0</span></div>
-      <div class="menu-hud-item">💎 <span id="accountGems">0</span></div>
-      <div class="menu-hud-item">🏆 Best <span id="accountBest">0</span></div>
+      <span class="chip"><svg class="ic ic-coin" aria-hidden="true"><use href="#i-coin"/></svg><span id="accountCoins">0</span></span>
+      <span class="chip"><svg class="ic ic-gem" aria-hidden="true"><use href="#i-gem"/></svg><span id="accountGems">0</span></span>
+      <span class="chip"><svg class="ic" aria-hidden="true"><use href="#i-peak"/></svg>Best&nbsp;<span id="accountBest">0</span></span>
     </div>
     <div class="toggle-row">
       <label class="toggle-switch">
@@ -981,7 +1158,7 @@
     const dotEl = document.getElementById('authAvatarDot');
     const menuBtn = document.getElementById('menuAuthBtn');
     if(labelEl) labelEl.textContent = shortLabel;
-    if(menuBtn) menuBtn.textContent = shortLabel;
+    if(menuBtn){ const l = menuBtn.querySelector('.nav-label'); if(l) l.textContent = shortLabel; else menuBtn.textContent = shortLabel; }
     if(dotEl){
       const skin = (typeof CHAR_SKINS !== 'undefined') ? (CHAR_SKINS.find(s=>s.id===save.equippedCharSkin) || CHAR_SKINS[0]) : null;
       dotEl.style.display = (save.nickname || currentUser) ? 'inline-block' : 'none';
@@ -1059,7 +1236,7 @@
         if(JSON.stringify(save) !== beforeJson){
           try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){}
           refreshHud(); refreshMenu();
-          if(progressOf(cloud) > progressOf(JSON.parse(beforeJson))) showToast('☁️ Cloud save loaded');
+          if(progressOf(cloud) > progressOf(JSON.parse(beforeJson))) showToast('Cloud save loaded');
         }
       }
       pushCloudSave();
@@ -1158,7 +1335,7 @@
       const link = raw.match(/https:\/\/console\.firebase\.google\.com\/\S+/);
       if(link && /index/i.test(raw)){
         // Firestore wants a one-time index for this query; the error carries a link that creates it
-        msg.innerHTML = 'The leaderboard needs a one-time setup. <a href="' + escapeHtml(link[0]) + '" target="_blank" rel="noopener" style="color:var(--glow);text-decoration:underline;">Create the index</a>, wait a few minutes, then reload.';
+        msg.innerHTML = 'The leaderboard needs a one-time setup. <a href="' + escapeHtml(link[0]) + '" target="_blank" rel="noopener" style="color:var(--accent-ui);text-decoration:underline;">Create the index</a>, wait a few minutes, then reload.';
       } else {
         msg.textContent = 'Could not load leaderboard: ' + raw;
       }
@@ -1179,6 +1356,7 @@
 
   /* ---------- reward toast ---------- */
   let toastTimer = null;
+  function ico(name){ return `<svg class="ic ic-${name}" aria-hidden="true"><use href="#i-${name}"/></svg>`; }
   function showToast(msg){
     let t = document.getElementById('rewardToast');
     if(!t){ t = document.createElement('div'); t.id = 'rewardToast'; document.body.appendChild(t); }
@@ -1243,7 +1421,7 @@
       const id = parseInt(idStr, 10);
       if(save.completedLevels[id] && !save.claimedLevelRewards[id]){
         const r = LEVEL_REWARDS[id];
-        let msg = `🎁 Level ${id} clear reward:`;
+        let msg = `Level ${id} clear reward:`;
         if(r.coins){ save.coins += r.coins; msg += ` +${r.coins} coins`; }
         if(r.gems){ save.gems += r.gems; msg += ` +${r.gems} gems`; }
         (r.skins||[]).forEach(sk=>{ grantSkin(sk.type, sk.id); msg += ` · new ${sk.type} skin`; });
@@ -1263,7 +1441,7 @@
     const msgs = [];
     FREE_MODE_REWARDS.forEach(r=>{
       if(save.bestScoreFree >= r.score && !save.claimedFreeRewards[r.score]){
-        let msg = `🎁 ${r.score}-step milestone:`;
+        let msg = `${r.score}-step milestone:`;
         if(r.coins){ save.coins += r.coins; msg += ` +${r.coins} coins`; }
         if(r.gems){ save.gems += r.gems; msg += ` +${r.gems} gems`; }
         (r.skins||[]).forEach(sk=>{ grantSkin(sk.type, sk.id); msg += ` · new ${sk.type} skin`; });
@@ -1319,7 +1497,7 @@
       persistSave();
       refreshHud();
       say('var(--glow)', `Code redeemed — ${data.desc || 'reward added'}.`);
-      showToast(`🎁 Code "${code}" redeemed!`);
+      showToast(`Code "${code}" redeemed!`);
       track('gift_code_redeemed', { code });
     }catch(e){
       say('var(--danger)', 'Could not check this code right now. Try again later.');
@@ -2018,7 +2196,7 @@
         grantSkin(m.category, m.id);
         if(firstTime){ save.claimedComboRewards[m.combo] = true; persistSave(); }
       }
-      showToast(`🔥 ${m.combo}-streak: ${m.label}!`);
+      showToast(`${m.combo}-streak: ${m.label}!`);
     });
   }
 
@@ -2042,7 +2220,7 @@
     scoreValEl.textContent = state.score;
     if(state.mode.challenge && !state.challengeHit && state.score >= state.mode.challenge){
       state.challengeHit = true;
-      showToast('🎯 Challenge beaten!');
+      showToast('Challenge beaten!');
       track('challenge_beaten', { beat: state.mode.challenge });
     }
     updateComboDisplay();
@@ -2135,7 +2313,7 @@
     } else {
       const cost = reviveCost();
       desc.textContent = 'Pay coins to get back up and keep climbing?';
-      btn.textContent = `REVIVE (🪙${cost})`;
+      btn.textContent = `REVIVE · ${cost} COINS`;
       if(save.coins < cost) btn.classList.add('locked'); else btn.classList.remove('locked');
     }
     reviveScreen.classList.remove('hidden');
@@ -2238,8 +2416,8 @@
     let challengeNote = '';
     if(state.mode.challenge){
       challengeNote = state.score >= state.mode.challenge
-        ? `\n🎯 Challenge beaten (${state.mode.challenge})!`
-        : `\n🎯 Challenge missed by ${state.mode.challenge - state.score} step${state.mode.challenge - state.score === 1 ? '' : 's'}`;
+        ? `\nChallenge beaten (${state.mode.challenge})!`
+        : `\nChallenge missed by ${state.mode.challenge - state.score} step${state.mode.challenge - state.score === 1 ? '' : 's'}`;
     }
     endExtra.textContent = `+${xpGain} XP  ·  +${coinGain} coins` + (rewardMsgs.length ? '\n' + rewardMsgs.join('\n') : '') + reviveNote + challengeNote;
     const runSecs = Math.max(1, (Date.now() - (state.startTime||Date.now())) / 1000);
@@ -2331,8 +2509,13 @@
       <div class="gauge-label">${save.xp} / ${need} XP</div>`;
   }
 
+  function renderLevelBar(wrap){
+    const need = xpToNext(save.level);
+    const pct = Math.max(0, Math.min(100, Math.round(save.xp / need * 100)));
+    wrap.innerHTML = `<div class="lvl"><span>Level <b>${save.level}</b></span><span>${save.xp} / ${need} XP</span></div><div class="lvl-track"><i style="width:${pct}%"></i></div>`;
+  }
   function refreshMenu(){
-    renderGauge(document.getElementById('menuGaugeWrap'), 160);
+    renderLevelBar(document.getElementById('menuGaugeWrap'));
     document.getElementById('menuCoins').textContent = save.coins;
     document.getElementById('menuGems').textContent = save.gems;
     document.getElementById('menuBest').textContent = save.bestScoreFree;
@@ -2347,15 +2530,15 @@
     if(banner){
       if(pendingChallenge){
         document.getElementById('challengeText').textContent =
-          `🎯 A friend climbed ${pendingChallenge.beat} steps in ${pendingChallenge.lang === 'fr' ? 'French' : 'English'}. Can you beat it?`;
+          `A friend climbed ${pendingChallenge.beat} steps in ${pendingChallenge.lang === 'fr' ? 'French' : 'English'}. Can you beat it?`;
         banner.classList.remove('hidden');
       } else banner.classList.add('hidden');
     }
     const note = document.getElementById('competitiveNote');
     if(note){
       note.textContent = currentUser
-        ? '🏆 Signed in — your best Free Mode run submits to the leaderboard automatically.'
-        : '🏆 Free Mode is the competitive mode — sign in to submit your run to the leaderboard.';
+        ? 'Signed in — your best Free Mode run goes to the leaderboard automatically.'
+        : 'Free Mode is the ranked mode — sign in to put your runs on the leaderboard.';
     }
   }
 
@@ -2464,7 +2647,7 @@
     try{
       if(navigator.share){ await navigator.share({ text }); return; }
     }catch(e){ if(e && e.name === 'AbortError') return; }
-    try{ await navigator.clipboard.writeText(text); showToast('📋 Copied — paste it to a friend!'); }
+    try{ await navigator.clipboard.writeText(text); showToast('Copied — paste it to a friend!'); }
     catch(e){ window.prompt('Copy this and send it to a friend:', text); }
   });
   document.getElementById('toMenuBtn').addEventListener('click', ()=>{
@@ -2503,11 +2686,11 @@
         ? `<div class="unlock-note">${item.unlock.type==='freeScore' ? `Reach ${item.unlock.value} steps in Free Mode to unlock` : item.unlock.type==='combo' ? `Hit a ${item.unlock.value}-word combo streak to unlock` : `Clear Level ${item.unlock.id} to unlock`}</div>`
         : '';
       const priceLabel = (!isOwned && !isLocked)
-        ? (isGemItem ? ` · 💎${item.gemCost}` : (item.cost>0 ? ` · 🪙${item.cost}` : ''))
+        ? (isGemItem ? ` ${ico('gem')}${item.gemCost}` : (item.cost>0 ? ` ${ico('coin')}${item.cost}` : ''))
         : '';
       card.innerHTML = `
         <div class="shop-swatch${isGemItem?' shine':''}" style="background:${swatchColor}"></div>
-        <div class="name">${item.name}${item.sound?' 🔊':''}${priceLabel}</div>
+        <div class="name">${item.name}${item.sound?' <span class="snd" title="Has sound">♪</span>':''}${priceLabel}</div>
         ${unlockNote}
         <button class="${btnClass}" ${isLocked?'disabled':''}>${btnLabel}</button>`;
       if(!isLocked){
@@ -2540,7 +2723,7 @@
     if(levelItems.length){
       const divider = document.createElement('div');
       divider.className = 'shop-divider';
-      divider.textContent = '🏆 Unlockable Rewards';
+      divider.textContent = 'Unlockable rewards';
       grid.appendChild(divider);
       levelItems.forEach(renderCard);
     }
@@ -2803,7 +2986,7 @@
     });
     const alive = st.lastPlayDay && dayDiff(st.lastPlayDay, todayKey()) <= 1;
     host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Days you played in the last ${weeks} weeks. You played on ${played} of ${windowDays} days.">${svg}</svg>
-      <div class="st-streak"><b>${alive ? st.dayStreak : 0}</b> day streak 🔥
+      <div class="st-streak"><b>${alive ? st.dayStreak : 0}</b> day streak
         <span>Longest: ${st.longestDayStreak} · Played ${played} of the last ${windowDays} days</span>
         <div class="st-legend">Less <i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i> More</div>
       </div>`;
@@ -2827,7 +3010,7 @@
       <div class="st-tiles">
         <div class="st-tile"><div class="lbl">Avg speed</div><div class="val">${wpm === null ? '–' : wpm}<small>WPM</small></div></div>
         <div class="st-tile"><div class="lbl">Accuracy</div><div class="val">${acc === null ? '–' : acc + '%'}</div><div class="st-meter"><i style="width:${acc || 0}%"></i></div></div>
-        <div class="st-tile"><div class="lbl">Day streak</div><div class="val">${alive ? st.dayStreak : 0}<small>🔥</small></div></div>
+        <div class="st-tile"><div class="lbl">Day streak</div><div class="val">${alive ? st.dayStreak : 0}<small>days</small></div></div>
       </div>
       <div class="st-mini">
         <div class="st-tile"><div class="lbl">Runs played</div><div class="val">${st.runs.toLocaleString()}</div></div>
@@ -2914,7 +3097,7 @@
     persistSave();
     if(save.leaderboardOptOut) removeFromLeaderboard();
     refreshAccountScreen();
-    showToast(save.leaderboardOptOut ? '🙈 Hidden from the public leaderboard' : '🏆 Visible on the public leaderboard');
+    showToast(save.leaderboardOptOut ? 'Hidden from the public leaderboard' : 'Visible on the public leaderboard');
   });
 
   ghostToggle.addEventListener('change', ()=>{
