@@ -8,7 +8,16 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="ASCENT — Type to Climb">
 <meta property="og:description" content="Type the word, climb the stairs, don't fall. Can you beat my score?">
-<meta name="twitter:card" content="summary">
+<meta property="og:url" content="https://ascent-navy-one.vercel.app/">
+<meta property="og:site_name" content="Ascent">
+<meta property="og:image" content="https://ascent-navy-one.vercel.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ascent-navy-one.vercel.app/og-image.png">
+<meta name="theme-color" content="#0a0d16">
+<link rel="canonical" href="https://ascent-navy-one.vercel.app/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -498,6 +507,52 @@
   .nav-label{ display:inline-block; text-transform:lowercase; }
   .nav-label::first-letter{ text-transform:uppercase; }
   .challenge-banner{ width:100%; border:1px solid var(--glass-line); box-shadow:inset 3px 0 0 var(--amber); background:rgba(255,184,77,0.10); border-radius:var(--r-md); }
+
+  /* ---------- intro + guided first run ---------- */
+  #intro{ position:fixed; inset:0; z-index:400; display:none; overflow:hidden; color:#e8eaf2;
+    background:radial-gradient(ellipse at 50% -10%, #1d2c4d, #0a0d16 72%); transition:opacity .5s ease; }
+  #intro.on{ display:block; }
+  #intro.out{ opacity:0; pointer-events:none; }
+  #intro .intro-title{ position:absolute; left:0; right:0; top:11%; text-align:center; padding:0 16px; transition:opacity .4s; }
+  #intro h1{ font-family:var(--sans); font-size:clamp(54px,13vw,118px); font-weight:700; letter-spacing:-0.03em; line-height:1; color:#e8eaf2; }
+  #intro h1 i{ color:var(--glow); font-style:normal; }
+  #intro .tag{ margin-top:12px; font-size:clamp(16px,2.4vw,22px); color:#9aa3bd; }
+  #introStairs{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  #introStairs path{ fill:none; stroke:var(--glow); stroke-width:8; stroke-linecap:round; stroke-linejoin:round; opacity:.9; }
+  #introStart{ position:absolute; left:50%; top:41%; transform:translateX(-50%); min-width:190px; transition:opacity .3s; }
+  #introLang{ position:absolute; top:14px; left:14px; display:flex; gap:6px; }
+  #introLang button, #tutSkip{ font:inherit; font-size:12px; font-weight:600; color:#9aa3bd; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:5px 12px; cursor:pointer; }
+  #introLang button[aria-pressed=true]{ color:#e8eaf2; border-color:var(--glow); }
+  #tutSkip{ position:fixed; top:58px; right:14px; z-index:430; display:none; }
+  #tutSkip.on{ display:block; }
+  #tutDim{ position:fixed; inset:0; z-index:410; background:rgba(3,6,12,.74); opacity:0; pointer-events:none; transition:opacity .35s ease; }
+  #tutDim.on{ opacity:1; pointer-events:auto; }
+  #buddy{ position:fixed; left:0; top:0; width:60px; height:60px; margin:-30px 0 0 -30px; z-index:420; display:none; pointer-events:none; will-change:translate,scale; }
+  #buddy.on{ display:block; }
+  #buddy .ball{ position:absolute; inset:0; border-radius:50%;
+    background:radial-gradient(circle at 36% 28%, #fff4d6, #ffb84d 52%, #d8801a);
+    box-shadow:0 8px 26px rgba(255,184,77,.35), inset -7px -9px 16px rgba(0,0,0,.18); }
+  #buddy .ball.talking{ animation:buddyBob .55s ease-in-out infinite; }
+  @keyframes buddyBob{ 0%,100%{ transform:translateY(0) scale(1,1); } 50%{ transform:translateY(-5px) scale(.97,1.04); } }
+  #buddy .eyes{ position:absolute; left:0; right:0; top:38%; display:flex; justify-content:center; gap:13px; opacity:0;
+    transform:translate(var(--ex,0px),var(--ey,0px)); transition:opacity .4s ease, transform .28s ease; }
+  #buddy.eyes-on .eyes{ opacity:1; }
+  #buddy .eyes i{ display:block; width:9px; height:9px; border-radius:50%; background:#16120b; transition:transform .12s ease; }
+  #buddy.blink .eyes i{ transform:scaleY(.12); }
+  #buddy.happy .eyes i{ width:13px; height:7px; background:transparent; border:3px solid #16120b; border-bottom:none; border-radius:13px 13px 0 0; }
+  #buddyChat{ position:fixed; left:96px; bottom:26px; z-index:421; max-width:min(520px, calc(100vw - 112px)); padding:14px 18px 12px;
+    background:rgba(22,28,48,.94); color:#e8eaf2; border:1px solid rgba(255,255,255,.16); border-radius:18px; box-shadow:0 10px 40px rgba(0,0,0,.45);
+    opacity:0; transform:translateY(8px); pointer-events:none; transition:opacity .25s ease, transform .25s ease; }
+  #buddyChat.on{ opacity:1; transform:none; pointer-events:auto; cursor:pointer; }
+  #buddyChat::before{ content:''; position:absolute; left:-7px; bottom:22px; width:14px; height:14px; background:inherit; border-left:1px solid rgba(255,255,255,.16); border-bottom:1px solid rgba(255,255,255,.16); transform:rotate(45deg); }
+  #buddyText{ font-size:16px; line-height:1.5; min-height:24px; }
+  #buddyHint{ display:block; margin-top:6px; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#8791ad; animation:hintPulse 1.6s ease-in-out infinite; }
+  @keyframes hintPulse{ 0%,100%{ opacity:.45; } 50%{ opacity:1; } }
+  @media (prefers-reduced-motion:reduce){ #buddy .ball.talking{ animation:none; } #buddyHint{ animation:none; } }
+  .legal-links{ text-align:center; font-size:12px; color:var(--text-dim); margin-top:6px; }
+  .legal-links a{ color:var(--text-dim); text-decoration:none; margin:0 8px; }
+  .legal-links a:hover{ color:var(--text); text-decoration:underline; }
+  .danger-link{ background:none; border:none; font:inherit; font-size:12px; color:var(--danger); text-decoration:underline; cursor:pointer; margin-top:4px; }
   @media (max-width:420px){ .menu-actions{ grid-template-columns:1fr; } .menu-links{ flex-wrap:nowrap; } .nav-link{ padding:9px 5px; gap:5px; font-size:12.5px; } .nav-link .ic{ width:16px; height:16px; } }
 
   /* ---- in-game HUD ---- */
@@ -552,6 +607,16 @@
 </head>
 <body>
 <div id="edgePulse"></div>
+<div id="intro" aria-label="Welcome to Ascent">
+  <div id="introLang" role="group" aria-label="Language"><button type="button" data-l="en">EN</button><button type="button" data-l="fr">FR</button></div>
+  <div class="intro-title"><h1>asc<i>e</i>nt</h1><p class="tag" id="introTag">Type the word. Climb the stairs.</p></div>
+  <svg id="introStairs" aria-hidden="true"><path id="introPath" d=""/></svg>
+  <button class="cta" id="introStart" type="button">Get started</button>
+</div>
+<div id="tutDim"></div>
+<div id="buddy" aria-hidden="true"><div class="ball"><div class="eyes"><i></i><i></i></div></div></div>
+<div id="buddyChat" role="status" aria-live="polite"><p id="buddyText"></p><small id="buddyHint">press any key</small></div>
+<button id="tutSkip" type="button">Skip intro</button>
 <div id="mobileGate">
   <div class="gateIcon">⌨️</div>
   <h1>ASC<span>ENT</span> is best on a keyboard</h1>
@@ -652,6 +717,7 @@
         <button class="nav-link" id="menuLeaderboardBtn"><svg class="ic" aria-hidden="true"><use href="#i-podium"/></svg><span class="nav-label">Board</span></button>
         <button class="nav-link" id="menuAuthBtn"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg><span class="nav-label">Sign in</span></button>
       </nav>
+      <p class="legal-links"><a href="/privacy" target="_blank" rel="noopener">Privacy</a>·<a href="/terms" target="_blank" rel="noopener">Terms</a></p>
     </div>
   </div>
 
@@ -750,6 +816,8 @@
     <div class="menu-row">
       <button class="cta" id="accountSignBtn">SIGN IN WITH GOOGLE</button>
     </div>
+    <button class="danger-link hidden" id="accountDeleteBtn">Delete my account and data</button>
+    <p class="legal-links"><a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>·<a href="/terms" target="_blank" rel="noopener">Terms of Use</a></p>
     <button class="cta secondary" id="accountBackBtn">BACK</button>
   </div>
 
@@ -1084,6 +1152,8 @@
     try{
       const raw = localStorage.getItem(SAVE_KEY);
       if(raw) save = Object.assign(defaultSave(), JSON.parse(raw));
+      // players who already have a save from before the guided intro existed never see it
+      if(typeof save.tutorialDone !== 'boolean') save.tutorialDone = !!raw;
       if(!save.claimedLevelRewards) save.claimedLevelRewards = {};
       if(!save.claimedFreeRewards) save.claimedFreeRewards = {};
       if(!save.claimedComboRewards) save.claimedComboRewards = {};
@@ -1150,6 +1220,31 @@
     fbAuth.signInWithPopup(provider).catch(err=>showToast('Sign-in failed: ' + err.message));
   }
   function signOutUser(){ if(fbAuth) fbAuth.signOut(); }
+  // Right to erasure: removes cloud save, leaderboard entries and the Google sign-in record, then clears this device.
+  let accountDeleted = false;
+  async function deleteAccountAndData(){
+    if(!currentUser || !fbDb) return;
+    if(!confirm('Delete your account and ALL your data?\n\nThis removes your cloud save, your leaderboard entries and your sign-in, and clears progress on this device. It cannot be undone.')) return;
+    const user = currentUser;
+    try{
+      // Deleting an account needs a fresh sign-in, so confirm identity first, before anything is removed.
+      await user.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
+    }catch(e){ showToast('Deletion cancelled — please confirm your Google sign-in to continue.'); return; }
+    try{
+      accountDeleted = true;
+      clearTimeout(cloudSaveTimer);
+      const lb = fbDb.collection('leaderboard');
+      await Promise.all([ lb.doc(leaderboardDocId('en')).delete(), lb.doc(leaderboardDocId('fr')).delete(), lb.doc(user.uid).delete().catch(()=>{}) ]);
+      await fbDb.collection('saves').doc(user.uid).delete();
+      await user.delete();
+    }catch(e){
+      accountDeleted = false;
+      showToast('Could not finish deleting your account. Please try again.');
+      return;
+    }
+    try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+    location.reload();
+  }
   function refreshAuthUI(){
     const shortLabel = save.nickname
       ? save.nickname.toUpperCase().slice(0,10)
@@ -1212,6 +1307,7 @@
     m.ownedStairSkins  = unionArr(local.ownedStairSkins, cloud.ownedStairSkins);
     m.ownedBackdrops   = unionArr(local.ownedBackdrops, cloud.ownedBackdrops);
     m.redeemedCodes    = unionArr(local.redeemedCodes, cloud.redeemedCodes);
+    m.tutorialDone     = !!(local.tutorialDone || cloud.tutorialDone);
     m.levelStars       = mergeMaps(local.levelStars, cloud.levelStars);
     m.completedLevels  = mergeMaps(local.completedLevels, cloud.completedLevels);
     m.claimedLevelRewards = mergeMaps(local.claimedLevelRewards, cloud.claimedLevelRewards);
@@ -1243,9 +1339,10 @@
     }catch(e){ console.warn('Cloud save pull failed', e); }
   }
   function pushCloudSave(){
-    if(!currentUser || !fbDb) return;
+    if(!currentUser || !fbDb || accountDeleted) return;
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(()=>{
+      if(accountDeleted) return;
       fbDb.collection('saves').doc(currentUser.uid).set(save).catch(e=>console.warn('Cloud save push failed', e));
     }, 800);
   }
@@ -2100,7 +2197,7 @@
     resetTimerBar(dur);
     state.currentWordStartTime = Date.now();
     updateGhostMarker();
-    state.timerHandle = setTimeout(onFail, dur);
+    state.timerHandle = setTimeout(()=>onFail('time'), dur);
   }
 
   function spawnAura(){
@@ -2247,6 +2344,7 @@
       const finished = (state.mode.type !== 'free') && (state.currentStepIndex >= (state.mode.type==='sequence'?state.mode.sequence.length:state.mode.count));
       buildScene();
       if(finished){ levelComplete(); return; }
+      if(state.mode.tutorial && tutorialAfterStep()) return;
       startTimerForStep();
     }, 320);
   }
@@ -2277,7 +2375,7 @@
     });
   }
 
-  function onFail(){
+  function onFail(cause){
     playFailSound();
     // brief invisible cooldown: if you're typing fast and don't notice a mistake right away,
     // this stops the next rapid keystrokes from also registering as fresh failures.
@@ -2292,6 +2390,7 @@
     state.multiplier = 1;
     updateComboDisplay();
     updateFlameState();
+    if(state.mode.tutorial){ tutorialOnFail(cause); return; }
     if(state.lives <= 0){
       // Free Mode stays purely competitive — no paid revives there. Learn Mode levels can
       // be revived with coins (or a free-revive earned from a combo streak this run).
@@ -2429,7 +2528,7 @@
     endScreen.classList.remove('hidden');
   }
 
-  function levelComplete(){ endGame(true); }
+  function levelComplete(){ if(state.mode.tutorial){ tutorialFinish(); return; } endGame(true); }
 
   function startGame(mode){
     mainMenu.classList.add('hidden');
@@ -2475,7 +2574,7 @@
       state.typed += expected;
       renderWordBanner();
       if(state.typed.length === target.length) onCorrectStep();
-    } else { state.keysWrong++; onFail(); }
+    } else { state.keysWrong++; onFail('key'); }
   });
 
   stageEl.addEventListener('mousemove', (e)=>{
@@ -2802,6 +2901,7 @@
   const langEnBtn = document.getElementById('langEnBtn');
   const langFrBtn = document.getElementById('langFrBtn');
   const accountSignBtn = document.getElementById('accountSignBtn');
+  const accountDeleteBtn = document.getElementById('accountDeleteBtn');
   const accountStatusMsg = document.getElementById('accountStatusMsg');
   const profileSub = document.getElementById('profileSub');
 
@@ -3056,6 +3156,7 @@
     if(currentUser){
       profileSub.textContent = `Signed in as ${currentUser.email || currentUser.displayName || 'your Google account'} · cloud saved`;
       accountSignBtn.textContent = 'SIGN OUT';
+      accountDeleteBtn.classList.remove('hidden');
       accountSignBtn.classList.add('secondary');
       accountStatusMsg.style.color = 'var(--glow)';
       accountStatusMsg.textContent = save.leaderboardOptOut
@@ -3064,6 +3165,7 @@
     } else {
       profileSub.textContent = 'Not signed in — progress is only saved on this device.';
       accountSignBtn.textContent = 'SIGN IN WITH GOOGLE';
+      accountDeleteBtn.classList.add('hidden');
       accountSignBtn.classList.remove('secondary');
       accountStatusMsg.style.color = 'var(--text-dim)';
       accountStatusMsg.textContent = fbReady()
@@ -3107,6 +3209,7 @@
     showToast(save.showGhost ? '👻 Pace ghost turned on' : '👻 Pace ghost turned off');
   });
 
+  accountDeleteBtn.addEventListener('click', deleteAccountAndData);
   accountSignBtn.addEventListener('click', ()=>{
     if(currentUser) signOutUser(); else signIn();
   });
@@ -3130,6 +3233,260 @@
     mainMenu.classList.remove('hidden');
   });
 
+
+  /* ---------- intro animation + guided first run ---------- */
+  const introEl = document.getElementById('intro'), introStartBtn = document.getElementById('introStart');
+  const buddyEl = document.getElementById('buddy'), buddyBall = buddyEl.querySelector('.ball');
+  const chatEl = document.getElementById('buddyChat'), chatText = document.getElementById('buddyText');
+  const dimEl = document.getElementById('tutDim'), skipBtn = document.getElementById('tutSkip');
+  const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const TUT = {
+    en:{
+      tag:'Type the word. Climb the stairs.', start:'Get started', skip:'Skip intro', hint:'press any key',
+      words:['sun','hat','run','climb','stairs','keyboard'],
+      intro:["Hey there! I'm Pip.","So you want to get better at typing fast on your keyboard? You're in exactly the right place.","Here's how it works: a word appears above the stairs. Type it letter by letter and your climber steps up.","Every word has a timer, but for now it's very relaxed. Ready? Type the word you see."],
+      firstWord:["Nice! One word, one step up.","Keep going. I'll jump in whenever there's something new to show you."],
+      combo:["Look at that streak! Finish words without a mistake to build a combo.","The longer your combo, the more points every word is worth. One mistake and it resets."],
+      failKey:["Oops, wrong key! Every mistake costs you one heart.","Lose all your hearts and you fall. But not today. Try that word again, you've got this."],
+      failTime:["Time's up! Every word has a timer, and running out costs you a heart.","Lose all your hearts and you fall. No stress though, try again."],
+      timeFirst:["That was the timer! Every word has one. Running out of time costs a heart too."],
+      keyFirst:["That was a wrong key. Typing a wrong letter costs a heart too."],
+      empty:["Out of hearts? No problem!","Here, take some new ones. You can do it, I believe in you!"],
+      done:["You did it!","Now you've got the basics. I'll leave the rest to you. Good luck up there!"]
+    },
+    fr:{
+      tag:'Tape le mot. Grimpe les marches.', start:'Commencer', skip:"Passer l'intro", hint:'appuie sur une touche',
+      words:['sol','pas','mur','monte','marche','clavier'],
+      intro:["Salut ! Moi, c'est Pip.","Tu veux apprendre à taper vite au clavier ? Tu es au bon endroit.","Voici comment ça marche : un mot apparaît au-dessus des marches. Tape-le lettre par lettre et ton grimpeur monte.","Chaque mot a un chrono, mais pour l'instant il est très tranquille. Prêt ? Tape le mot que tu vois."],
+      firstWord:["Bravo ! Un mot, une marche.","Continue. Je reviens dès qu'il y a quelque chose de nouveau à te montrer."],
+      combo:["Quelle série ! Termine des mots sans faute pour faire un combo.","Plus ton combo est long, plus chaque mot rapporte de points. Une faute et il repart à zéro."],
+      failKey:["Oups, mauvaise touche ! Chaque faute te coûte un cœur.","Si tu perds tous tes cœurs, tu tombes. Mais pas aujourd'hui. Réessaie ce mot, tu vas y arriver."],
+      failTime:["Temps écoulé ! Chaque mot a un chrono, et le dépasser te coûte un cœur.","Si tu perds tous tes cœurs, tu tombes. Pas de stress, réessaie."],
+      timeFirst:["C'était le chrono ! Chaque mot en a un. Manquer de temps coûte aussi un cœur."],
+      keyFirst:["C'était une mauvaise touche. Une mauvaise lettre coûte aussi un cœur."],
+      empty:["Plus de cœurs ? Pas de souci !","Tiens, en voilà de nouveaux. Tu peux le faire, je crois en toi !"],
+      done:["Tu as réussi !","Tu connais maintenant les bases. Je te laisse faire le reste. Bonne chance là-haut !"]
+    }
+  };
+  const tr = ()=> TUT[save.language === 'fr' ? 'fr' : 'en'];
+  const tut = { active:false, blocking:false, docked:false, seen:{}, typer:null, line:0, lines:[], done:null, typing:false, openedAt:0, eyeTimer:null };
+  const vw = ()=> window.innerWidth, vh = ()=> window.innerHeight;
+  const dockPos = ()=> ({ x:46, y:vh() - 52 });
+
+  // position / animate the guide: translate (x,y) and scale are separate properties so they animate independently
+  function placeBuddy(x, y, sc){ buddyEl.style.translate = `${x}px ${y}px`; buddyEl.style.scale = String(sc); }
+  function animateTo(el, frames, ms, easing){
+    return new Promise(res=>{
+      const a = el.animate(frames, { duration: REDUCED ? 0 : ms, easing: easing || 'ease-in-out', fill:'forwards' });
+      a.onfinish = ()=>{ try{ a.commitStyles(); }catch(e){} a.cancel(); res(); };
+    });
+  }
+  const wait = ms => new Promise(r=>setTimeout(r, REDUCED ? 0 : ms));
+
+  function layoutIntroStairs(){
+    const W = Math.min(vw()*0.84, 680), n = 5, x0 = (vw() - W) / 2, stepW = W / (n + 0.6);
+    const stepH = Math.min(vh()*0.075, stepW*0.55), baseY = vh()*0.9, r = 30;
+    let d = `M ${x0} ${baseY}`;
+    const spots = [];
+    for(let k = 0; k <= n; k++){
+      const treadY = baseY - k*stepH, len = k === n ? stepW*0.6 : stepW;
+      spots.push({ x: x0 + k*stepW + len/2, y: treadY - r - 4 });
+      d += ` H ${x0 + k*stepW + len}`;
+      if(k < n) d += ` V ${baseY - (k+1)*stepH}`;
+    }
+    document.getElementById('introPath').setAttribute('d', d);
+    return spots;
+  }
+
+  function setIntroLang(l, persist){
+    save.language = l; if(persist) persistSave();
+    const t = TUT[l];
+    document.getElementById('introTag').textContent = t.tag;
+    introStartBtn.textContent = t.start;
+    skipBtn.textContent = t.skip;
+    document.getElementById('buddyHint').textContent = t.hint;
+    document.querySelectorAll('#introLang button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.l === l));
+  }
+
+  let introSpots = null;
+  function showIntro(){
+    tut.active = true;
+    if(!save.tutorialDone && !tut.langPicked){ const nav = (navigator.language||'en').toLowerCase(); save.language = nav.indexOf('fr') === 0 ? 'fr' : 'en'; }
+    setIntroLang(save.language);
+    introEl.classList.remove('out'); introEl.classList.add('on');
+    document.getElementById('introStart').style.opacity = '1';
+    document.querySelector('#intro .intro-title').style.opacity = '1';
+    skipBtn.classList.add('on');
+    introSpots = layoutIntroStairs();
+    const top = introSpots[introSpots.length - 1];
+    buddyEl.classList.add('on'); buddyBall.classList.remove('talking');
+    buddyEl.classList.remove('eyes-on','happy');
+    placeBuddy(top.x, top.y, 1);
+    tut.docked = false;
+    setTimeout(()=>{ try{ introStartBtn.focus({preventScroll:true}); }catch(e){} }, 50);
+  }
+
+  async function runIntroAnimation(){
+    introStartBtn.style.opacity = '0';
+    document.querySelector('#intro .intro-title').style.opacity = '.25';
+    introStartBtn.style.pointerEvents = 'none';
+    // 1) bounce down the stairs, hop by hop
+    for(let j = introSpots.length - 1; j > 0; j--){
+      const a = introSpots[j], b = introSpots[j-1];
+      const hop = REDUCED ? 0 : 340;
+      buddyBall.animate([{transform:'translateY(0) scale(1,1)'},{transform:'translateY(-46px) scale(.96,1.05)', offset:.45, easing:'ease-in'},{transform:'translateY(0) scale(1.12,.86)', offset:.92},{transform:'translateY(0) scale(1,1)'}],{ duration:hop, easing:'ease-out' });
+      await animateTo(buddyEl, [{ translate:`${a.x}px ${a.y}px` },{ translate:`${b.x}px ${b.y}px` }], hop, 'linear');
+    }
+    // 2) roll to the middle and swell until it fills the screen
+    const cx = vw()/2, cy = vh()/2, cover = Math.hypot(vw(), vh()) / 30 * 1.08;
+    try{ playCompleteChime(); }catch(e){}
+    await animateTo(buddyEl, [{ translate:`${introSpots[0].x}px ${introSpots[0].y}px`, scale:'1' },{ translate:`${cx}px ${cy}px`, scale:String(cover) }], 900, 'cubic-bezier(.55,.05,.35,1)');
+    // 3) underneath: start the tutorial run (paused), then reveal it as the ball shrinks into the guide
+    introEl.classList.remove('on');
+    introStartBtn.style.pointerEvents = '';
+    tutorialBegin();
+    await wait(260);
+    dimEl.classList.add('on');
+    const d = dockPos();
+    await animateTo(buddyEl, [{ translate:`${cx}px ${cy}px`, scale:String(cover) },{ translate:`${d.x}px ${d.y}px`, scale:'1' }], 850, 'cubic-bezier(.3,.7,.25,1)');
+    tut.docked = true;
+    buddyEl.classList.add('eyes-on');
+    startEyes();
+    await wait(450);
+    sayLines(tr().intro, resumeTutorialRun);
+  }
+
+  function startEyes(){
+    clearInterval(tut.eyeTimer);
+    tut.eyeTimer = setInterval(()=>{
+      const talking = buddyBall.classList.contains('talking');
+      const range = talking ? 3 : 2;
+      buddyEl.style.setProperty('--ex', ((Math.random()*2-1)*range).toFixed(1) + 'px');
+      buddyEl.style.setProperty('--ey', ((Math.random()*2-1)*(range*0.6)).toFixed(1) + 'px');
+      if(Math.random() < .22){ buddyEl.classList.add('blink'); setTimeout(()=>buddyEl.classList.remove('blink'), 140); }
+    }, 750);
+  }
+
+  function tutorialBegin(){
+    const t = tr();
+    startGame({ type:'sequence', sequence:t.words.slice(), time:9000, label:'Tutorial', tutorial:true });
+    clearTimeout(state.timerHandle);    // the run waits until the guide has said hello
+    state.locked = true;
+    tut.seen = {};
+  }
+  function resumeTutorialRun(){
+    if(!state || !state.mode || !state.mode.tutorial) return;
+    state.locked = false;
+    renderWordBanner();
+    startTimerForStep();
+  }
+
+  /* dialogue: the game is paused and dimmed, only the chat stays bright; any key / click moves on */
+  function typeLine(text){
+    clearInterval(tut.typer);
+    tut.typing = true; chatText.textContent = '';
+    let i = 0;
+    tut.typer = setInterval(()=>{
+      i++; chatText.textContent = text.slice(0, i);
+      if(i >= text.length){ clearInterval(tut.typer); tut.typing = false; }
+    }, REDUCED ? 0 : 20);
+    if(REDUCED){ chatText.textContent = text; tut.typing = false; clearInterval(tut.typer); }
+  }
+  function sayLines(lines, done){
+    if(!tut.active || !lines || !lines.length){ if(done) done(); return; }
+    if(state && state.running) clearTimeout(state.timerHandle);
+    tut.lines = lines; tut.line = 0; tut.done = done; tut.blocking = true; tut.openedAt = Date.now();
+    dimEl.classList.add('on'); chatEl.classList.add('on');
+    buddyBall.classList.add('talking'); buddyEl.classList.add('happy');
+    typeLine(lines[0]);
+  }
+  function advanceDialog(){
+    if(!tut.blocking) return;
+    if(Date.now() - tut.openedAt < 350) return;           // ignore keystrokes that were already in flight
+    if(tut.typing){ clearInterval(tut.typer); tut.typing = false; chatText.textContent = tut.lines[tut.line]; return; }
+    if(tut.line < tut.lines.length - 1){ tut.line++; typeLine(tut.lines[tut.line]); return; }
+    closeDialog();
+  }
+  function closeDialog(){
+    clearInterval(tut.typer); tut.typing = false;
+    tut.blocking = false;
+    chatEl.classList.remove('on'); dimEl.classList.remove('on');
+    buddyBall.classList.remove('talking'); buddyEl.classList.remove('happy');
+    const cb = tut.done; tut.done = null;
+    if(cb) cb();
+  }
+  document.addEventListener('keydown', (e)=>{
+    if(!tut.blocking) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    if(e.repeat || ['Shift','Control','Alt','Meta','CapsLock'].indexOf(e.key) >= 0) return;
+    advanceDialog();
+  }, true);
+  chatEl.addEventListener('pointerdown', advanceDialog);
+  dimEl.addEventListener('pointerdown', ()=>{ if(tut.blocking) advanceDialog(); });
+
+  /* hooks called from the game loop */
+  function tutorialAfterStep(){
+    const n = state.currentStepIndex, t = tr();
+    if(n === 1 && !tut.seen.first){ tut.seen.first = true; sayLines(t.firstWord, resumeTutorialRun); return true; }
+    if(n === 3 && !tut.seen.combo){ tut.seen.combo = true; sayLines(t.combo, resumeTutorialRun); return true; }
+    return false;
+  }
+  function tutorialOnFail(cause){
+    clearTimeout(state.timerHandle);
+    const t = tr();
+    let lines = null, after = resumeTutorialRun;
+    if(state.lives <= 0){
+      lines = t.empty;
+      after = ()=>{ state.lives = 3; renderHearts(); resumeTutorialRun(); };
+    } else if(!tut.seen.fail){
+      tut.seen.fail = cause === 'time' ? 'time' : 'key';
+      lines = cause === 'time' ? t.failTime : t.failKey;
+    } else if(cause === 'time' && tut.seen.fail === 'key' && !tut.seen.time){
+      tut.seen.time = true; lines = t.timeFirst;
+    } else if(cause !== 'time' && tut.seen.fail === 'time' && !tut.seen.keyDone){
+      tut.seen.keyDone = true; lines = t.keyFirst;
+    }
+    if(lines){ state.locked = true; sayLines(lines, after); }
+    else { renderWordBanner(); startTimerForStep(); }
+  }
+  function tutorialFinish(){
+    state.running = false; clearTimeout(state.timerHandle);
+    climberEl.classList.remove('idle','stepping'); climberEl.classList.add('landed');
+    sayLines(tr().done, ()=>endTutorial(true));
+  }
+  function endTutorial(completed){
+    clearInterval(tut.typer); clearInterval(tut.eyeTimer);
+    tut.active = false; tut.blocking = false; tut.docked = false;
+    chatEl.classList.remove('on'); dimEl.classList.remove('on'); skipBtn.classList.remove('on');
+    introEl.classList.remove('on'); introEl.classList.add('out');
+    buddyBall.classList.remove('talking'); buddyEl.classList.remove('happy');
+    const finish = ()=>{
+      buddyEl.classList.remove('on','eyes-on'); buddyEl.style.translate = ''; buddyEl.style.scale = '';
+      introEl.classList.remove('out');
+    };
+    if(state && state.mode && state.mode.tutorial){ stopRunIfActive(); state = null; }
+    setHudPlaying(false);
+    save.tutorialDone = true; persistSave();
+    track(completed ? 'tutorial_complete' : 'tutorial_skip');
+    document.querySelectorAll('#app .overlay').forEach(o=>o.classList.add('hidden'));
+    refreshMenu(); mainMenu.classList.remove('hidden');
+    if(buddyEl.classList.contains('on') && !REDUCED){
+      const d = dockPos();
+      buddyEl.animate([{ opacity:1 },{ opacity:0 }], { duration:350, fill:'forwards' }).onfinish = ()=>{ finish(); buddyEl.getAnimations().forEach(a=>a.cancel()); };
+    } else finish();
+  }
+  introStartBtn.addEventListener('click', ()=>{ if(tut.active && !tut.docked) runIntroAnimation(); });
+  skipBtn.addEventListener('click', ()=>endTutorial(false));
+  document.querySelectorAll('#introLang button').forEach(b=>b.addEventListener('click', ()=>{ tut.langPicked = true; setIntroLang(b.dataset.l, true); }));
+  window.addEventListener('resize', ()=>{
+    if(tut.docked){ const d = dockPos(); placeBuddy(d.x, d.y, 1); }
+    else if(introEl.classList.contains('on') && !state?.running){ introSpots = layoutIntroStairs(); const t = introSpots[introSpots.length-1]; placeBuddy(t.x, t.y, 1); }
+  });
+  function maybeStartIntro(){
+    const forced = /[?&]intro=1\b/.test(location.search);
+    if(forced || (!save.tutorialDone && !looksLikeTouchOnlyDevice())) showIntro();
+  }
+
   /* ---------- boot ---------- */
   applyCharSkin(save.equippedCharSkin);
   applyBackdrop(save.equippedBackdrop);
@@ -3142,6 +3499,7 @@
   checkFreeModeRewards();
   initMobileGate();
   startEmbers();
+  maybeStartIntro();
 })();
 </script>
 </body>
