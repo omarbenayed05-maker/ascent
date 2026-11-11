@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ascent-navy-one.vercel.app/sitemap.xml

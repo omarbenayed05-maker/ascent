@@ -8,7 +8,16 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="ASCENT — Type to Climb">
 <meta property="og:description" content="Type the word, climb the stairs, don't fall. Can you beat my score?">
-<meta name="twitter:card" content="summary">
+<meta property="og:url" content="https://ascent-navy-one.vercel.app/">
+<meta property="og:site_name" content="Ascent">
+<meta property="og:image" content="https://ascent-navy-one.vercel.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ascent-navy-one.vercel.app/og-image.png">
+<meta name="theme-color" content="#0a0d16">
+<link rel="canonical" href="https://ascent-navy-one.vercel.app/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -498,6 +507,10 @@
   .nav-label{ display:inline-block; text-transform:lowercase; }
   .nav-label::first-letter{ text-transform:uppercase; }
   .challenge-banner{ width:100%; border:1px solid var(--glass-line); box-shadow:inset 3px 0 0 var(--amber); background:rgba(255,184,77,0.10); border-radius:var(--r-md); }
+  .legal-links{ text-align:center; font-size:12px; color:var(--text-dim); margin-top:6px; }
+  .legal-links a{ color:var(--text-dim); text-decoration:none; margin:0 8px; }
+  .legal-links a:hover{ color:var(--text); text-decoration:underline; }
+  .danger-link{ background:none; border:none; font:inherit; font-size:12px; color:var(--danger); text-decoration:underline; cursor:pointer; margin-top:4px; }
   @media (max-width:420px){ .menu-actions{ grid-template-columns:1fr; } .menu-links{ flex-wrap:nowrap; } .nav-link{ padding:9px 5px; gap:5px; font-size:12.5px; } .nav-link .ic{ width:16px; height:16px; } }
 
   /* ---- in-game HUD ---- */
@@ -652,6 +665,7 @@
         <button class="nav-link" id="menuLeaderboardBtn"><svg class="ic" aria-hidden="true"><use href="#i-podium"/></svg><span class="nav-label">Board</span></button>
         <button class="nav-link" id="menuAuthBtn"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg><span class="nav-label">Sign in</span></button>
       </nav>
+      <p class="legal-links"><a href="/privacy" target="_blank" rel="noopener">Privacy</a>·<a href="/terms" target="_blank" rel="noopener">Terms</a></p>
     </div>
   </div>
 
@@ -750,6 +764,8 @@
     <div class="menu-row">
       <button class="cta" id="accountSignBtn">SIGN IN WITH GOOGLE</button>
     </div>
+    <button class="danger-link hidden" id="accountDeleteBtn">Delete my account and data</button>
+    <p class="legal-links"><a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>·<a href="/terms" target="_blank" rel="noopener">Terms of Use</a></p>
     <button class="cta secondary" id="accountBackBtn">BACK</button>
   </div>
 
@@ -1150,6 +1166,31 @@
     fbAuth.signInWithPopup(provider).catch(err=>showToast('Sign-in failed: ' + err.message));
   }
   function signOutUser(){ if(fbAuth) fbAuth.signOut(); }
+  // Right to erasure: removes cloud save, leaderboard entries and the Google sign-in record, then clears this device.
+  let accountDeleted = false;
+  async function deleteAccountAndData(){
+    if(!currentUser || !fbDb) return;
+    if(!confirm('Delete your account and ALL your data?\n\nThis removes your cloud save, your leaderboard entries and your sign-in, and clears progress on this device. It cannot be undone.')) return;
+    const user = currentUser;
+    try{
+      // Deleting an account needs a fresh sign-in, so confirm identity first, before anything is removed.
+      await user.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
+    }catch(e){ showToast('Deletion cancelled — please confirm your Google sign-in to continue.'); return; }
+    try{
+      accountDeleted = true;
+      clearTimeout(cloudSaveTimer);
+      const lb = fbDb.collection('leaderboard');
+      await Promise.all([ lb.doc(leaderboardDocId('en')).delete(), lb.doc(leaderboardDocId('fr')).delete(), lb.doc(user.uid).delete().catch(()=>{}) ]);
+      await fbDb.collection('saves').doc(user.uid).delete();
+      await user.delete();
+    }catch(e){
+      accountDeleted = false;
+      showToast('Could not finish deleting your account. Please try again.');
+      return;
+    }
+    try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+    location.reload();
+  }
   function refreshAuthUI(){
     const shortLabel = save.nickname
       ? save.nickname.toUpperCase().slice(0,10)
@@ -1243,9 +1284,10 @@
     }catch(e){ console.warn('Cloud save pull failed', e); }
   }
   function pushCloudSave(){
-    if(!currentUser || !fbDb) return;
+    if(!currentUser || !fbDb || accountDeleted) return;
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(()=>{
+      if(accountDeleted) return;
       fbDb.collection('saves').doc(currentUser.uid).set(save).catch(e=>console.warn('Cloud save push failed', e));
     }, 800);
   }
@@ -2802,6 +2844,7 @@
   const langEnBtn = document.getElementById('langEnBtn');
   const langFrBtn = document.getElementById('langFrBtn');
   const accountSignBtn = document.getElementById('accountSignBtn');
+  const accountDeleteBtn = document.getElementById('accountDeleteBtn');
   const accountStatusMsg = document.getElementById('accountStatusMsg');
   const profileSub = document.getElementById('profileSub');
 
@@ -3056,6 +3099,7 @@
     if(currentUser){
       profileSub.textContent = `Signed in as ${currentUser.email || currentUser.displayName || 'your Google account'} · cloud saved`;
       accountSignBtn.textContent = 'SIGN OUT';
+      accountDeleteBtn.classList.remove('hidden');
       accountSignBtn.classList.add('secondary');
       accountStatusMsg.style.color = 'var(--glow)';
       accountStatusMsg.textContent = save.leaderboardOptOut
@@ -3064,6 +3108,7 @@
     } else {
       profileSub.textContent = 'Not signed in — progress is only saved on this device.';
       accountSignBtn.textContent = 'SIGN IN WITH GOOGLE';
+      accountDeleteBtn.classList.add('hidden');
       accountSignBtn.classList.remove('secondary');
       accountStatusMsg.style.color = 'var(--text-dim)';
       accountStatusMsg.textContent = fbReady()
@@ -3107,6 +3152,7 @@
     showToast(save.showGhost ? '👻 Pace ghost turned on' : '👻 Pace ghost turned off');
   });
 
+  accountDeleteBtn.addEventListener('click', deleteAccountAndData);
   accountSignBtn.addEventListener('click', ()=>{
     if(currentUser) signOutUser(); else signIn();
   });
